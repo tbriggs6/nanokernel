@@ -1,33 +1,33 @@
 #ifndef _INTR_H
-#define_INTR_H
+#define _INTR_H
 
 
 #define TRAP(name,num) \
-	.globl trap_##name		; \
-	.type trap_##name @function	; \
+	.globl trap_#num		; \
+	.type trap_##num @function	; \
 	.align 2			; \
-trap_##name:				; \
+trap_##num:				; \
 	pushl $(num)			; \
 	call handler			; \
 	pop %eax			; \
 	popa				; \
 	retfi				; \
 
-#define EXCP(name) \
-	.globl trap_##name		; \
-	.type trap_##name @function	; \
+#define EXCP(name,num)			  \
+	.globl excp_##num		; \
+	.type excp_##num @function	; \
 	.align 2			; \
-trap_##name:				; \
-	call name			; \
+excp_##num:				; \
+        call name			;	  \
 	pop %eax			; \
 	popa				; \
 	retfi				
 	
 #define INTR(name,num) 		\
-	.globl intr_##name		; \
-	.type intr_##name @function	; \
+	.globl intr_##num		; \
+	.type intr_##num @function	; \
 	.align 2			; \
-intr_##name:				; \
+intr_##num:				; \
 	call name			; \
 	pop %eax			; \
 	popa				; \

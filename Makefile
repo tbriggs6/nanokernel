@@ -11,7 +11,8 @@ OBJS:=\
 boot.o \
 kernel.o \
 console.o \
-bios.o \
+handler.o \
+intr.o
 
 all: myos.bin
 

@@ -8,6 +8,8 @@ void kmain(void)
 {
   console_init( COLOR_BLUE );
 
+  init_handlers( );
+  
   const char *str = "hello world";
   int i = 0;
   while (str[i] != 0) {

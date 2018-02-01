@@ -53,7 +53,6 @@ _next:
 hang:	hlt
 	jmp hang
 
-INTR(0, intignore)
 
 # Bootstrap GDT
 .p2align 2                                # force 4 byte alignment

@@ -34,26 +34,14 @@
 #define FLAG_DEFAULT (FLAG_GRAN_4K | FLAG_SIZE_32)
   
 #define GDTENTRY(base,limit,access,flags)		\
-  .byte ((limit >> 0 & 0xff), \
-    ((limit >> 8 & 0xff), \
-    ((base >> 0 & 0xff), \
-    ((base >> 8 & 0xff), \
-    ((base >> 16) & 0xff),  \
-    ((access >> 0) & 0xff), \
+  .byte ((limit >> 0) & 0xff),				\
+    ((limit >> 8) & 0xff),				\
+    ((base >> 0) & 0xff),				\
+    ((base >> 8) & 0xff),				\
+    ((base >> 16) & 0xff),		\
+    ((access >> 0) & 0xff),		\
     ((flags & 0xf0) | ((limit >> 16) & 0x0f)),	\
     ((base >> 24) & 0xff); 
 
-
-    
-
-/*#define GDTENTRY(base,limit,access) 		\
-   .byte (limit & 0xff),		 	\
-	 ((limit >> 8) & 0xff), 		\
-	 (base & 0xff), 			\
-	 ((base >> 8) & 0xff), 			\
-	 ((base >> 16) & 0xff), 		\
-	 (access & 0xff) , 			\
-	 0
-*/
 #endif
 

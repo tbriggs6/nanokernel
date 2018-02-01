@@ -1,5 +1,4 @@
 #include "console.h"
-#include "intcall.h"
 
 static uint8_t curr_page = 0;
 static uint8_t row = 0, col = 0;
@@ -133,8 +132,6 @@ void console_putch(char ch)
 
 void console_set_pos(uint8_t r, uint8_t c)
 {
-  struct biosregs regs;
-  
   row = r;
   col = c;
 

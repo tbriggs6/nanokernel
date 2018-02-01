@@ -1,9 +1,7 @@
 #ifndef _HANDLER
 #define _HANDLER
 
-
-#define TRAP_HANDLE(name)  trap_name
-#define EXCP_HANDLE(name)  excp_name
-#define INTR_HANDLE(name)  intr_name
+#define IDT_NUM_ENTRY (64)
+#define IDQ_IRQ_OFFSET (32)
 
 #endif
