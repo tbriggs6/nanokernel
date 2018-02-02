@@ -29,5 +29,12 @@
 
 #define IRQ_BASE 32
 
+#define NUM_IRQ 128
+
+#ifndef __ASSEMBLER__
+
+extern void intr_loaddt( );
+extern uint64_t idt[NUM_IRQ];
+#endif
 
 #endif

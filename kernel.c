@@ -2,13 +2,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "intnum.h"
 #include "console.h"
+#include "handler.h"
+
+void handle_error( )
+{
+  console_puts("ERROR DETECTED\n");
+  
+}
 
 void kmain(void)
 {
   console_init( COLOR_BLUE );
 
-  init_handlers( );
+  init_handler( );
   
   const char *str = "hello world";
   int i = 0;
@@ -16,7 +24,14 @@ void kmain(void)
     console_putch(str[i]);
     i++;
   }
-  
+
+  int x = 3 / str[i];
+  console_putch(x);
+
+
+  while(1) {
+    asm("hlt");
+  }
 }
 
 

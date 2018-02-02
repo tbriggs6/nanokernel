@@ -1,109 +1,58 @@
 #include "intnum.h"
-
-#define EXCP(id, funname) EXCP2(id,funname)
-	
-#define EXCP2(id, funname) \
-	.global _excp_##id		;\
-	.type function _excp_##id	;\
-_excp_##id				;\
-	pushl $(id)			;\
-	call funname			;\
-	iret				;\
-
-
-#define TRAP(id, funname) TRAP2(id,funname)
-	
-#define TRAP2(id, funname) \
-	.globl _trap_##id		;\
-	.type function _trap_##id	;\
-_trap_##id				;\
-	pushl $(id)			;\
-	call funname			;\
-	iret				;\
-
-#define INTRM(id, funname) INTRM2(id, funname)
-#define INTRM2(id, funname) \
-	.globl _intr_##id		;\
-	.type function _intr_##id 	;\
-_intr_##id				;\
-	pushl $(id)			;\
-	call funname			;\
-	pushl %eax			;\
-	movb $0x20, %ah			;\
-	outb %ah, $0x20			;\
-	popl %eax			;\
-	iret				;\
-
-
-#define INTRS(id, funname) INTRS2(id, funname)
-#define INTRS2(id, funname) \
-	.globl _intr_##id		;\
-	.type function _intr_##id 	;\
-_intr_id				;\
-	pushl $(id)			;\
-	call funname			;\
-	pushl %eax			;\
-	movb $0x20, %ah			;\
-	outb %ah, $0x20			;\
-	popl %eax			;\
-	iret				;\
+#include "intr.h"
 	
 	.text
 
-EXCP(EXCP_DIVIDE, handle_exception)
-EXCP(EXCP_DEBUG, handle_exception)
-EXCP(EXCP_NMI, handle_exception)
-EXCP(EXCP_BRKPT, handle_exception)
-EXCP(EXCP_OFLOW, handle_exception)
-EXCP(EXCP_BOUND, handle_exception)
-EXCP(EXCP_ILLOP, handle_exception)
-EXCP(EXCP_DEVICE, handle_exception)
-TRAP(TRAP_DBLFLT, handle_exception)
-TRAP(TRAP_CPSEG, handle_exception)
-TRAP(TRAP_TSS, handle_exception)
-TRAP(TRAP_SEGNP, handle_exception)
-TRAP(TRAP_STACK, handle_exception)
-TRAP(TRAP_GPFLT, handle_exception)
-TRAP(TRAP_PGFLT, handle_exception)
-TRAP(TRAP_FPERR, handle_exception)
-TRAP(TRAP_ALIGN, handle_exception)
-TRAP(TRAP_MCHK, handle_exception)
-TRAP(TRAP_SIMDERR, handle_exception)
-TRAP(TRAP_VIRTERR, handle_exception)
-TRAP(TRAP_CTRLERR, handle_exception)
-EXCP(EXCP_SYSCALL, handle_exception)
+	# Load the IDTR with the address of the idt (see below)
 
-
-INTRM(0, handle_irq)
-INTRM(1, handle_irq)
-INTRM(2, handle_irq)
-INTRM(3, handle_irq)
-
-INTRM(4, handle_irq)
-INTRM(5, handle_irq)
-INTRM(6, handle_irq)
-INTRM(7, handle_irq)
-
-INTRS(8, handle_irq)
-INTRS(9, handle_irq)
-INTRS(10, handle_irq)
-INTRS(11, handle_irq)
-
-INTRS(12, handle_irq)
-INTRS(13, handle_irq)
-INTRS(14, handle_irq)
-INTRS(15, handle_irq)
-
-
-
-
-
-
-
-
-
-
-
-
+	.global intr_loaddt
+	.type intr_loaddt, @function
 	
+intr_loaddt:
+	mov 4(%esp),%eax
+	lidt (%eax)
+	ret
+
+
+EXCP(0, excp_handler)
+EXCP(1, excp_handler)
+EXCP(2, excp_handler)
+EXCP(3, excp_handler)
+EXCP(4, excp_handler)
+EXCP(5, excp_handler)
+EXCP(6, excp_handler)
+EXCP(7, excp_handler)
+ERR(8,  err_handler)
+ERR(10,  err_handler)
+ERR(11,  err_handler)
+ERR(12,  err_handler)
+ERR(13,  err_handler)
+ERR(14,  err_handler)
+EXCP(16, excp_handler)	
+ERR(17,  err_handler)
+EXCP(18, excp_handler)
+EXCP(19, excp_handler)	
+
+// irq 0 - 7
+INTR(32, int_handler)  
+INTR(33, int_handler)  
+INTR(34, int_handler)
+INTR(35, int_handler)
+INTR(36, int_handler)
+INTR(37, int_handler)
+INTR(38, int_handler)
+INTR(39, int_handler)
+
+// irq 8-15
+INTR(40, int_handler)
+INTR(41, int_handler)
+INTR(42, int_handler)
+INTR(43, int_handler)
+INTR(44, int_handler)
+INTR(45, int_handler)
+INTR(46, int_handler)
+INTR(47, int_handler)
+
+// software interrupt (later)	
+INTR(48, int_handler)
 	

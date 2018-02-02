@@ -58,9 +58,11 @@ hang:	hlt
 .p2align 2                                # force 4 byte alignment
 gdt:
   GDTENTRY( 0, 0, 0, 0)                         # null seg
-  GDTENTRY(0, 0xfffff, ACC_KERN_CODE, FLAG_DEFAULT)
-  GDTENTRY(0, 0xfffff, ACC_KERN_DATA, FLAG_DEFAULT)
-
+  GDTENTRY(0, 0xffffffff, 0x9A, 0xCF)
+  GDTENTRY(0, 0xffffffff, 0x92, 0xCF)	
+  GDTENTRY(0, 0xffffffff, 0xFA, 0xCF)	
+  GDTENTRY(0, 0xffffffff, 0xF2, 0xCF)
+	
 gdtdesc:
   .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
   .long   gdt                             # address gdt

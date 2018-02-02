@@ -1,190 +1,147 @@
 #include <stdint.h>
 #include "handler.h"
 #include "intnum.h"
-
-typedef struct {
-  uint16_t offset_lo;   // offset bits 0..15
-  uint16_t selector;    // selector
-  uint8_t zero;         // zeros
-  uint8_t type_attr;    // type and attributes
-  uint16_t offset_hi;   // offset bits 31:16
-} idt_entry_t;
-
-typedef struct {
-  uint16_t limit;
-  uint32_t base;
-} idtr_t;
-
-/* the low-level template for handlers is
-   defined in intr.S 
-
-   -- EXCEP(id, funname)  will create a 
-   _excep_id  function that will call:  funname(id)
-
-   -- TRAP(id, funname) will create a 
-   _trap_id function that will call funname(id)
-
-   -- INTR(id, funname) will create an
-   _intr_id function that will call funname(0)
-
-   The _excep_id, _trap_id, and _intr_id are what 
-   must be loaded into the IDT as the handler.
-*/
+#include "console.h"
 
 
-void handle_exception(uint32_t EXCP)
+void (*handlers[NUM_IRQ])(int);
+
+static idt_entry_t idt_entries[NUM_IRQ];
+
+static void idt_register_handler(uint16_t intnum, idt_gate_t type, void (*handler)(void))
 {
+   uint32_t handler_address_asint = (uint32_t) handler;
+
+  idt_entries[intnum].offset_lo = (handler_address_asint & 0xffff);
+  idt_entries[intnum].selector = 0x08;
+  idt_entries[intnum].zero = 0;
+  idt_entries[intnum].type = 0x8e;
+  idt_entries[intnum].offset_hi = (handler_address_asint >> 16) & 0xffff;
+}
+
+void excp_handler(int excp_num)
+{
+  switch(excp_num) {
+  case 0: console_puts("EXP 0"); break;
+  case 1: console_puts("EXP 0"); break;
+  case 2: console_puts("EXP 0"); break;
+  case 3: console_puts("EXP 0"); break;
+  case 4: console_puts("EXP 0"); break;
+  case 5: console_puts("EXP 0"); break;
+  case 6: console_puts("EXP 0"); break;
+  case 7: console_puts("EXP 0"); break;
+  case 16: console_puts("EXP 0"); break;
+  case 18: console_puts("EXP 0"); break;
+  case 19: console_puts("EXP 0"); break;
+  default: console_puts("EXP UNKNOWN"); break;
+  }
+  asm("hang_excp: hlt; jmp hang_excp;\n");
   return;
 }
 
-
-void handle_irq(uint32_t IRQ)
+void err_handler(int err_num)
 {
+
+  switch(err_num) {
+  case 8: console_puts("ERR 8"); break;
+  case 10: console_puts("ERR 10"); break;
+  case 11: console_puts("ERR 11"); break;
+  case 12: console_puts("ERR 12"); break;
+  case 13: console_puts("ERR 13"); break;
+  case 14: console_puts("ERR 14"); break;
+  case 17: console_puts("ERR 15"); break;
+  default: console_puts("EXP UNKNOWN"); break;
+  }
+  asm("hang_err: hlt; jmp hang_err;\n");
   return;
 }
 
-static idt_entry_t entries[IDT_NUM_ENTRY];
-
-static void exception_set(int number, void (*handler)(void))
+void int_handler(int int_num)
 {
-  entries[number].offset_lo = ((uint32_t) handler & 0xffff);
-  entries[number].offset_hi = ((uint32_t) handler >> 16) & 0xffff;
-  entries[number].zero = 0;
-  entries[number].type_attr = (1 << 7) | 0x0f;
-  entries[number].selector = 0 | 0 << 2 | 0x08 << 3;
+  switch(int_num) {
+  case 32: console_puts("INT 32"); break;
+  case 33: console_puts("INT 33"); break;
+  case 34: console_puts("INT 34"); break;
+  case 35: console_puts("INT 35"); break;
+  case 36: console_puts("INT 36"); break;
+  case 37: console_puts("INT 37"); break;
+  case 38: console_puts("INT 38"); break;
+  case 39: console_puts("INT 39"); break;
+  case 40: console_puts("INT 40"); break;
+  case 41: console_puts("INT 41"); break;
+  case 42: console_puts("INT 42"); break;
+  case 43: console_puts("INT 43"); break;
+  case 44: console_puts("INT 44"); break;
+  case 45: console_puts("INT 45"); break;
+  case 46: console_puts("INT 46"); break;
+  case 47: console_puts("INT 47"); break;
+  case 48: console_puts("INT 48"); break;
+  default: console_puts("INT UNKNOWN"); break;
+  }
+  return;
 }
 
-static void trap_set(int number, void (*handler)(void))
-{
-  entries[number].offset_lo = ((uint32_t)handler & 0xffff);
-  entries[number].offset_hi = ((uint32_t)handler >> 16) & 0xffff;
-  entries[number].zero = 0;
-  entries[number].type_attr = (1 << 7) | 0x0e;
-  entries[number].selector = 0 | 0 << 2 | 0x08 << 3;
-}
-
-static void interrupt_set(int number, void (*handler)(void))
-{
-  entries[number].offset_lo = ((uint32_t)handler & 0xffff);
-  entries[number].offset_hi = ((uint32_t)handler >> 16) & 0xffff;
-  entries[number].zero = 0;
-  entries[number].type_attr = (1 << 7) | 0x0e;
-  entries[number].selector = 0 | 0 << 2 | 0x08 << 3;
-}
-
-static void zero_set(int number)
-{
-  entries[number].offset_lo = 0;
-  entries[number].offset_hi = 0;
-  entries[number].zero = 0;
-  entries[number].type_attr = 0;
-  entries[number].selector = 0;
-}
-
-
-extern void _excp_0(void);
-extern void _excp_1(void);
-extern void _excp_2(void);
-extern void _excp_3(void);
-extern void _excp_4(void);
-extern void _excp_5(void);
-extern void _excp_6(void);
-extern void _excp_7(void);
-extern void _trap_8(void);
-extern void _trap_9(void);
-extern void _trap_10(void);
-extern void _trap_11(void);
-extern void _trap_12(void);
-extern void _trap_13(void);
-extern void _trap_14(void);
-extern void _trap_15(void);
-extern void _trap_16(void);
-extern void _trap_17(void);
-extern void _trap_18(void);
-extern void _trap_19(void);
-extern void _trap_20(void);
-extern void _trap_21(void);
-extern void _excp_64(void);
-extern void _intr_0(void);
-extern void _intr_1(void);
-extern void _intr_2(void);
-extern void _intr_3(void);
-extern void _intr_4(void);
-extern void _intr_5(void);
-extern void _intr_6(void);
-extern void _intr_7(void);
-extern void _intr_8(void);
-extern void _intr_9(void);
-extern void _intr_10(void);
-extern void _intr_11(void);
-extern void _intr_12(void);
-extern void _intr_13(void);
-extern void _intr_14(void);
-extern void _intr_15(void);
-
-
-void init_handlers( )
+static void zero_handlers( )
 {
   int i;
-
-  for (i = 0; i < IDT_NUM_ENTRY; i++) {
-    zero_set(i);
+  for (i = 0; i < NUM_IRQ; i++) {
+    handlers[i] = (void *) 0;
   }
-
-  exception_set(0, _excp_0);
-  exception_set(1, _excp_1);
-  exception_set(2, _excp_2);
-  exception_set(3, _excp_3);
-  exception_set(4, _excp_4);
-  exception_set(5, _excp_5);
-  exception_set(6, _excp_6);
-  exception_set(7, _excp_7);
-  trap_set(8, _trap_8);
-  trap_set(9, _trap_9);
-  trap_set(10, _trap_10);
-  trap_set(11, _trap_11);
-  trap_set(12, _trap_12);
-  trap_set(13, _trap_13);
-  trap_set(14, _trap_14);
-  trap_set(15, _trap_15);
-  trap_set(16, _trap_16);
-  trap_set(17, _trap_17);
-  trap_set(18, _trap_18);
-  trap_set(19, _trap_19);
-  trap_set(20, _trap_20);
-  trap_set(21, _trap_21);
-
-  exception_set(64, _excp_64);
+}
+    
+void register_handler(uint16_t intnum,  void (*handler)(int))
+{
+  if ((intnum > 0) && (intnum < NUM_IRQ))
+    handlers[intnum] = handler;
+}
 
 
-  interrupt_set(32, _intr_0);
-  interrupt_set(33, _intr_1);
-  interrupt_set(34, _intr_2);
-  interrupt_set(35, _intr_3);
-  interrupt_set(36, _intr_4);
-  interrupt_set(37, _intr_5);
-  interrupt_set(38, _intr_6);
-  interrupt_set(39, _intr_7);
-  interrupt_set(40, _intr_8);
-  interrupt_set(41, _intr_9);
-  interrupt_set(42, _intr_10);
-  interrupt_set(43, _intr_11);
-  interrupt_set(44, _intr_12);
-  interrupt_set(45, _intr_13);
-  interrupt_set(46, _intr_14);
-  interrupt_set(47, _intr_15);
+void init_handler( )
+{
 
-
-  idtr_t idtr;
-  idtr.limit = (IDT_NUM_ENTRY * 8) - 1;
-  idtr.base = (uint32_t) &entries;
-
-  uint32_t idtr_addr = (uint32_t) &idtr;
-  asm (
-       "lidt (%0);\n"
-       :
-       :"r"(idtr_addr)
-       :
-       );
+  zero_handlers( );
   
+  idt_register_handler(0, TRAP32, _excp_0);
+  idt_register_handler(1, TRAP32, _excp_1);
+  idt_register_handler(2, TRAP32, _excp_2);
+  idt_register_handler(3, TRAP32, _excp_3);
+  idt_register_handler(4, TRAP32, _excp_4);
+  idt_register_handler(5, TRAP32, _excp_5);
+  idt_register_handler(6, TRAP32, _excp_6);
+  idt_register_handler(7, TRAP32, _excp_7);
+  idt_register_handler(8, TRAP32, _err_8);
+
+  idt_register_handler(10, TRAP32, _err_10);
+  idt_register_handler(11, TRAP32, _err_11);
+  idt_register_handler(12, TRAP32, _err_12);
+  idt_register_handler(13, TRAP32, _err_13);
+  idt_register_handler(14, TRAP32, _err_14);
+
+  idt_register_handler(16, TRAP32, _excp_16);
+  idt_register_handler(17, TRAP32, _err_17);
+  idt_register_handler(18, TRAP32, _excp_18);
+  idt_register_handler(19, TRAP32, _excp_19);
+  idt_register_handler(32, INTR32, _intr_32);
+  idt_register_handler(33, INTR32, _intr_33);
+  idt_register_handler(34, INTR32, _intr_34);
+  idt_register_handler(35, INTR32, _intr_35);
+  idt_register_handler(36, INTR32, _intr_36);
+  idt_register_handler(37, INTR32, _intr_37);
+  idt_register_handler(38, INTR32, _intr_38);
+  idt_register_handler(39, INTR32, _intr_39);
+  idt_register_handler(40, INTR32, _intr_40);
+  idt_register_handler(41, INTR32, _intr_41);
+  idt_register_handler(42, INTR32, _intr_42);
+  idt_register_handler(43, INTR32, _intr_43);
+  idt_register_handler(44, INTR32, _intr_44);
+  idt_register_handler(45, INTR32, _intr_45);
+  idt_register_handler(46, INTR32, _intr_46);
+  idt_register_handler(47, INTR32, _intr_47);
+  idt_register_handler(48, INTR32, _intr_48);
+
+
+  idt_desc_t idt_desc = { .limit = sizeof(idt_entry_t) * 50 - 1,
+			  .base = (uint32_t) &idt_entries };
+  
+  intr_loaddt(&idt_desc);
 }

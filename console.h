@@ -28,6 +28,7 @@ void console_init(color_t color);
 void console_clear(void);
 void console_scroll(int rows);
 void console_putch(char ch);
+void console_puts(const char *str);
 void console_set_pos(uint8_t r, uint8_t c);
 void console_set_fgcolor(color_t fgcolor);
 void console_set_bgcolor(color_t bgcolor);

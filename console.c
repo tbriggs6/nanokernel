@@ -12,6 +12,16 @@ static volatile uint16_t * console_get_page( int page )
   return (volatile uint16_t *) (0xb8000 + (page * width * height * 2));
 }
 
+
+void console_puts(const char *str)
+{
+  int i = 0;
+  while (str[i] != 0x00) {
+    console_putch(str[i]);
+    i++;
+  }
+}
+
 void console_clear( )
 {
   volatile uint16_t *framebuffer = console_get_page(0);
