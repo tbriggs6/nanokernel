@@ -23,7 +23,6 @@ stack_top:
 # The linker script specifies _start as the entry point to the kernel and the
 # bootloader will jump to this position once the kernel has been loaded.
 .section .text
-
 	.global _start
 _start:
 	# make sure that we are in protected mode
@@ -53,21 +52,15 @@ _next:
 hang:	hlt
 	jmp hang
 
-
 # Bootstrap GDT
 .p2align 2                                # force 4 byte alignment
 gdt:
   GDTENTRY( 0, 0, 0, 0)                         # null seg
-  GDTENTRY(0, 0xffffffff, 0x9A, 0xCF)
-  GDTENTRY(0, 0xffffffff, 0x92, 0xCF)	
-  GDTENTRY(0, 0xffffffff, 0xFA, 0xCF)	
-  GDTENTRY(0, 0xffffffff, 0xF2, 0xCF)
+  GDTENTRY(0, 0xffffffff, ACC_KERN_CODE, FLAG_DEFAULT)
+  GDTENTRY(0, 0xffffffff, ACC_KERN_DATA, FLAG_DEFAULT)	
+  GDTENTRY(0, 0xffffffff, ACC_USER_CODE, FLAG_DEFAULT)	
+  GDTENTRY(0, 0xffffffff, ACC_USER_DATA, FLAG_DEFAULT)
 	
 gdtdesc:
   .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
   .long   gdt                             # address gdt
-
-
-	
-
-	

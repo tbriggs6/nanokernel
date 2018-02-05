@@ -10,23 +10,16 @@
   .type _intr_##num, @function ; \
  _intr_##num: 			  \
 	cli                     ; \
-        push $(num)		; \
 	pusha                   ; \
-	mov  %ds, %ax             ; \
-	push %eax                ; \
-	mov $0x10, %ax           ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
+	mov $0x10, %ax          ; \
+	mov %ax,%ds             ; \
+	mov %ax,%es             ; \
 	mov %ax,%fs             ; \
 	mov %ax,%gs             ; \
-	call handler  		; \
-	pop %eax                ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
-	mov %ax,%fs             ; \
-	mov %ax,%gs             ; \
+        push $(num)		; \
+        call handler  		; \
+        add $4, %esp            ; \
 	popa                    ; \
-	add  $4, %esp
 	iret
 
 #define EXCP(num,handler)	EXCP2(num,handler)
@@ -35,23 +28,16 @@
   .type _excp_##num, @function ; \
  _excp_##num: 			  \
 	cli                     ; \
-        push $(num)		; \
 	pusha                   ; \
-	mov  %ds, %ax             ; \
-	push %eax                ; \
-	mov $0x10, %ax           ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
+	mov $0x10, %ax          ; \
+	mov %ax,%ds             ; \
+	mov %ax,%es             ; \
 	mov %ax,%fs             ; \
 	mov %ax,%gs             ; \
-	call handler  		; \
-	pop %eax                ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
-	mov %ax,%fs             ; \
-	mov %ax,%gs             ; \
+	push $(num)             ; \
+        call handler  		; \
+        add  $4, %esp           ; \
 	popa                    ; \
-	add  $4, %esp
 	iret
 
 #define ERR(num,handler)	ERR2(num,handler)
@@ -60,23 +46,17 @@
   .type _err_##num, @function  ; \
  _err_##num: 			  \
         cli                     ; \
-        push $(num)		; \
 	pusha                   ; \
-	mov  %ds, %ax             ; \
-	push %eax                ; \
-	mov $0x10, %ax           ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
+	mov $0x10, %ax          ; \
+	mov %ax,%ds             ; \
+	mov %ax,%es             ; \
 	mov %ax,%fs             ; \
 	mov %ax,%gs             ; \
-	call handler  		; \
-	pop %eax                ; \
-	mov %ax,%ds               ; \
-	mov %ax,%es               ; \
-	mov %ax,%fs             ; \
-	mov %ax,%gs             ; \
-	popa                    ; \
-	add  $8, %esp
-	iret
+	push $(num)             ; \
+        call handler  		; \
+	add  $4, %esp           ; \
+        popa                    ; \
+	add  $4, %esp           ; \
+        iret
 	
 #endif

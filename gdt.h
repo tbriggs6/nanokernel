@@ -31,6 +31,12 @@
 #define ACC_KERN_DATA (ACC_PRESENT | ACC_PRIV_KERN |\
 		       ACC_DATA | ACC_DATA_WR)
 
+#define ACC_USER_CODE (ACC_PRESENT | ACC_PRIV_USER | \
+                       ACC_EXEC_CONFORM | ACC_CODE_RD)
+
+#define ACC_USER_DATA (ACC_PRESENT | ACC_PRIV_USER |\
+                       ACC_DATA | ACC_DATA_WR)
+
 #define FLAG_DEFAULT (FLAG_GRAN_4K | FLAG_SIZE_32)
   
 #define GDTENTRY(base,limit,access,flags)		\

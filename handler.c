@@ -23,16 +23,16 @@ void excp_handler(int excp_num)
 {
   switch(excp_num) {
   case 0: console_puts("EXP 0"); break;
-  case 1: console_puts("EXP 0"); break;
-  case 2: console_puts("EXP 0"); break;
-  case 3: console_puts("EXP 0"); break;
-  case 4: console_puts("EXP 0"); break;
-  case 5: console_puts("EXP 0"); break;
-  case 6: console_puts("EXP 0"); break;
-  case 7: console_puts("EXP 0"); break;
-  case 16: console_puts("EXP 0"); break;
-  case 18: console_puts("EXP 0"); break;
-  case 19: console_puts("EXP 0"); break;
+  case 1: console_puts("EXP 1"); break;
+  case 2: console_puts("EXP 2"); break;
+  case 3: console_puts("EXP 3"); break;
+  case 4: console_puts("EXP 4"); break;
+  case 5: console_puts("EXP 5"); break;
+  case 6: console_puts("EXP 6"); break;
+  case 7: console_puts("EXP 7"); break;
+  case 16: console_puts("EXP 16"); break;
+  case 18: console_puts("EXP 18"); break;
+  case 19: console_puts("EXP 19"); break;
   default: console_puts("EXP UNKNOWN"); break;
   }
   asm("hang_excp: hlt; jmp hang_excp;\n");

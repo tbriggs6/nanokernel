@@ -7,10 +7,28 @@ static uint8_t width = 80, height = 25;
 static color_t fgcolor = COLOR_WHITE;
 static color_t bgcolor = COLOR_BLACK;
 
+#define CGA_BASE 0xb8000
+#define CGA_PORT 0x3d4
+
 static volatile uint16_t * console_get_page( int page )
 {
-  return (volatile uint16_t *) (0xb8000 + (page * width * height * 2));
+  return (volatile uint16_t *) (CGA_BASE + (page * width * height * 2));
 }
+
+
+static void cga_output(uint8_t value, uint16_t port)
+{
+  __asm __volatile ("outb %0, %w1" : : "a" (value), "d" (port) );
+}
+
+static void console_cga_set_cursor(uint8_t r, uint8_t c)
+{
+  cga_output(14, CGA_PORT);
+  cga_output(r, CGA_PORT+1);
+  cga_output(15, CGA_PORT);
+  cga_output(c, CGA_PORT+1);
+}
+      
 
 
 void console_puts(const char *str)
@@ -145,5 +163,6 @@ void console_set_pos(uint8_t r, uint8_t c)
   row = r;
   col = c;
 
+  console_cga_set_cursor(r,c);
 }
 
