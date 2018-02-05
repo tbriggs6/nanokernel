@@ -9,7 +9,6 @@
   .global _intr_##num		; \
   .type _intr_##num, @function ; \
  _intr_##num: 			  \
-	cli                     ; \
 	pusha                   ; \
 	mov $0x10, %ax          ; \
 	mov %ax,%ds             ; \
@@ -19,6 +18,10 @@
         push $(num)		; \
         call handler  		; \
         add $4, %esp            ; \
+	sti                     ; \
+	movb $0x20, %al         ; \
+	outb %al, $0x20         ; \
+	outb %al, $0xa0         ; \
 	popa                    ; \
 	iret
 

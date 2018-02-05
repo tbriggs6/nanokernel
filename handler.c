@@ -56,11 +56,28 @@ void err_handler(int err_num)
   return;
 }
 
+
+static __inline uint8_t inb(int port) {
+  uint8_t data;
+  __asm __volatile("inb %w1, %0" : "=a" (data) : "d" (port));
+  return data;
+}
+
 void int_handler(int int_num)
 {
+  char c = 0;
   switch(int_num) {
   case 32: console_puts("INT 32"); break;
-  case 33: console_puts("INT 33"); break;
+  case 33:
+    console_puts("INT 33");
+    do {
+      if (inb(0x60) != c) {
+	c = inb(0x60);
+	if (c > 0) break;
+      }
+    } while(1);
+    
+    break;
   case 34: console_puts("INT 34"); break;
   case 35: console_puts("INT 35"); break;
   case 36: console_puts("INT 36"); break;
@@ -78,6 +95,9 @@ void int_handler(int int_num)
   case 48: console_puts("INT 48"); break;
   default: console_puts("INT UNKNOWN"); break;
   }
+
+  pic_end_interrupt(int_num - 32);
+
   return;
 }
 
@@ -99,6 +119,8 @@ void register_handler(uint16_t intnum,  void (*handler)(int))
 void init_handler( )
 {
 
+  asm volatile ("cli");
+  
   zero_handlers( );
   
   idt_register_handler(0, TRAP32, _excp_0);

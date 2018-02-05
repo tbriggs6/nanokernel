@@ -5,6 +5,7 @@
 #include "intnum.h"
 #include "console.h"
 #include "handler.h"
+#include "pic.h"
 
 void handle_error( )
 {
@@ -18,6 +19,13 @@ void kmain(void)
 
   init_handler( );
   
+  pic_init( );
+
+  pic_enable_interrupt(IRQ1);
+  
+  asm volatile ("sti");
+
+  
   const char *str = "hello world";
   int i = 0;
   while (str[i] != 0) {
@@ -25,6 +33,7 @@ void kmain(void)
     i++;
   }
 
+  while(1) ; 
 }
 
 

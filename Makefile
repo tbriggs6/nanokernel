@@ -12,7 +12,8 @@ boot.o \
 kernel.o \
 console.o \
 intr.o \
-handler.o
+handler.o \
+pic.o
 
 all: myos.bin
 
