@@ -28,6 +28,7 @@ void kmain(void)
   int x = 3 / str[i];
   console_putch(x);
 
+  console_puts("after except");
 
   while(1) {
     asm("hlt");
