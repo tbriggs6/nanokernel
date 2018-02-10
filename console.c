@@ -1,4 +1,6 @@
 #include "console.h"
+#include "chrdev.h"
+#include "kstdlib.h"
 
 static uint8_t curr_page = 0;
 static uint8_t row = 0, col = 0;
@@ -23,10 +25,15 @@ static void cga_output(uint8_t value, uint16_t port)
 
 static void console_cga_set_cursor(uint8_t r, uint8_t c)
 {
+  int pos = (r * width + c) * 2;
+
+  uint8_t low = pos & 0xff;
+  uint8_t hi = (pos >> 8) & 0xff;
+  
   cga_output(14, CGA_PORT);
-  cga_output(r, CGA_PORT+1);
+  cga_output(hi, CGA_PORT+1);
   cga_output(15, CGA_PORT);
-  cga_output(c, CGA_PORT+1);
+  cga_output(low, CGA_PORT+1);
 }
       
 
@@ -61,6 +68,21 @@ void console_set_bgcolor(color_t color)
 }
 
 
+uint8_t console_fake_getch( ) { return 0; }
+int console_fake_empty() { return 1; }
+int console_fake_full( ) { return 0; }
+
+chrdev_t console_dev = {
+  .driver_name = "console",
+  .getch = console_fake_getch,
+  .putch = console_putch,
+  .isempty = console_fake_empty,
+  .isfull = console_fake_full,
+  .rxcount = 0,
+  .txcount = 0
+};
+
+
 // initialize the console to a clear screen with the bg color
 void console_init(color_t color)
 {
@@ -74,6 +96,9 @@ void console_init(color_t color)
   height = 25;
   
   curr_page = 0;
+
+  chrdev_register(&console_dev);
+  stdout = &console_dev;
 }
 
 
@@ -104,7 +129,7 @@ static void console_clear_line(int row_num)
     
 }
 
-void console_putch(char ch)
+int console_putch(uint8_t ch)
 {
   volatile uint16_t *framebuffer = console_get_page(curr_page);
   int i;
@@ -156,6 +181,7 @@ void console_putch(char ch)
   }
 
   console_set_pos(row, col);
+  return 1;
 }
 
 void console_set_pos(uint8_t r, uint8_t c)
@@ -165,4 +191,5 @@ void console_set_pos(uint8_t r, uint8_t c)
 
   console_cga_set_cursor(r,c);
 }
+
 

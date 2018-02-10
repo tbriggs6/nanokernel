@@ -13,7 +13,13 @@ kernel.o \
 console.o \
 intr.o \
 handler.o \
-pic.o
+pic.o \
+kmalloc.o \
+kstdlib.o \
+list.o \
+kbd.o  \
+chrdev.o \
+fifo.o \
 
 all: myos.bin
 

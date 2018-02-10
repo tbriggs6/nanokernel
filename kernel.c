@@ -6,6 +6,7 @@
 #include "console.h"
 #include "handler.h"
 #include "pic.h"
+#include "kstdlib.h"
 
 void handle_error( )
 {
@@ -13,27 +14,47 @@ void handle_error( )
   
 }
 
+extern uint32_t *_heap_size;
+extern uint32_t *_heap_start;
+extern uint32_t *_heap_end;
+
 void kmain(void)
 {
+
+  // create a heap
+  kmalloc_init( );
+  
+  // initialize chrdevs
+  chrdev_init( );
+
+  // handle interrupts
+  init_handler( );
+    
+  // handle PIC
+  pic_init( );
+  pic_enable_interrupt(IRQ1);
+
+  // sets stdout
   console_init( COLOR_BLUE );
 
-  init_handler( );
-  
-  pic_init( );
+  kprintf("Enabling keyboard\n");
+  // sets stdin
+  keyboard_init( );
 
-  pic_enable_interrupt(IRQ1);
+  kprintf("Finished init\n");
   
   asm volatile ("sti");
 
-  
-  const char *str = "hello world";
-  int i = 0;
-  while (str[i] != 0) {
-    console_putch(str[i]);
-    i++;
+  // stoopd program
+  while(1) {
+    char ch;
+    ch = getchar( );
+    console_clear( );
+    console_set_pos(0,0);
+    kprintf("%x", ch);
+    
   }
 
-  while(1) ; 
 }
 
 

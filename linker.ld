@@ -39,7 +39,15 @@ SECTIONS
 		*(.bss)
 		*(.stack)
 	}
-
+	.heap BLOCK(4K) : ALIGN(4K) 
+	{
+  	    _heap_start = ABSOLUTE(.) ; 
+	    . += 1M;
+	    _heap_end = _heap_start + 1M;
+	    _heap_size = (_heap_end - _heap_start);
+	    KEEP(*(.heap)) 
+        }
+ 
 	/* The compiler may produce other sections, put them in the proper place in
 	   in this file, if you'd like to include them in the final kernel. */
 }

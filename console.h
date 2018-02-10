@@ -27,7 +27,7 @@ typedef uint8_t color_t;
 void console_init(color_t color);
 void console_clear(void);
 void console_scroll(int rows);
-void console_putch(char ch);
+int console_putch(uint8_t ch);
 void console_puts(const char *str);
 void console_set_pos(uint8_t r, uint8_t c);
 void console_set_fgcolor(color_t fgcolor);

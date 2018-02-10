@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "kstdlib.h"
 #include "handler.h"
 #include "intnum.h"
 #include "console.h"
@@ -57,26 +58,18 @@ void err_handler(int err_num)
 }
 
 
-static __inline uint8_t inb(int port) {
-  uint8_t data;
-  __asm __volatile("inb %w1, %0" : "=a" (data) : "d" (port));
-  return data;
-}
 
 void int_handler(int int_num)
 {
+
+  
+  kprintf("INT %d\n", int_num);
+  
   char c = 0;
   switch(int_num) {
   case 32: console_puts("INT 32"); break;
   case 33:
     console_puts("INT 33");
-    do {
-      if (inb(0x60) != c) {
-	c = inb(0x60);
-	if (c > 0) break;
-      }
-    } while(1);
-    
     break;
   case 34: console_puts("INT 34"); break;
   case 35: console_puts("INT 35"); break;
@@ -96,6 +89,11 @@ void int_handler(int int_num)
   default: console_puts("INT UNKNOWN"); break;
   }
 
+
+  if (handlers[int_num] != NULL) {
+    handlers[int_num](int_num);
+  }
+  
   pic_end_interrupt(int_num - 32);
 
   return;
