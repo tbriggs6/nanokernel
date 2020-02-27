@@ -4,7 +4,7 @@
 #include "kstdlib.h"
 
 
-static struct fifo {
+struct fifo {
   int read_pos;       // where to read from
   int write_pos;      // where to write to
   int num_entries;    // how many items currently in FIFO
@@ -13,6 +13,11 @@ static struct fifo {
   uint8_t *entries;      // pointer to (max_entries * entry_size) bytes
 };
 
+
+fifo_t *fifo_create( )
+{
+  return kmalloc(sizeof(struct fifo));
+}
 
 void fifo_init(fifo_t *fifo, size_t max_entries, size_t entry_size)
 {
@@ -35,7 +40,7 @@ void fifo_add(fifo_t *fifo, void *entry)
     int offset = fifo->write_pos * fifo->entry_size;
     kmemcpy(fifo->entries+offset, entry, fifo->entry_size);
     fifo->num_entries++;
-    fifo->write_pos = (fifo->write_pos + 1) & fifo->max_entries;
+    fifo->write_pos = (fifo->write_pos + 1) % fifo->max_entries;
   }
   else {
     kprintf("Error - could not add to FIFO, out of space\n");

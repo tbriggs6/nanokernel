@@ -7,6 +7,7 @@
 struct fifo;
 typedef struct fifo fifo_t;
 
+fifo_t *fifo_create( );
 int fifo_sizeof( );
 void fifo_init(fifo_t *fifo, size_t max_entries, size_t entry_size);
 void fifo_add(fifo_t *fifo, void *entry);

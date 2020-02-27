@@ -7,6 +7,10 @@
    URL: https://github.com/lewischeng-ms/mit-jos/blob/master/inc/x86.h
 */
 
+static __inline void nop( ) {
+  __asm __volatile("nop");
+}
+
 // Read a byte from the given input port
 static __inline uint8_t inb(uint16_t port) {
   uint8_t data;
