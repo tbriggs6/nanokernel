@@ -25,7 +25,7 @@ static void cga_output(uint8_t value, uint16_t port)
 
 static void console_cga_set_cursor(uint8_t r, uint8_t c)
 {
-  int pos = (r * width + c) * 2;
+  int pos = (r * width) + c;
 
   uint8_t low = pos & 0xff;
   uint8_t hi = (pos >> 8) & 0xff;
@@ -146,7 +146,7 @@ int console_putch(uint8_t ch)
     row = row + 1;
     if (row >= height)  {
       console_scroll(1);
-      row = 25;
+      row = height-1;
     }
     if (ch == '\n') {
       col = 0;

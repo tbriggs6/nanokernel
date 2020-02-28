@@ -3,7 +3,7 @@ AS:=$(TARGET)-as
 CC:=$(TARGET)-gcc
 LD:=$(TARGET)-ld
 
-CFLAGS := -ffreestanding -O2 -Wall -Wextra -nostdlib -nostartfiles -nodefaultlibs  -Wl,--build-id=none  -ggdb
+CFLAGS := -ffreestanding -O0 -Wall -Wextra -nostdlib -nostartfiles -nodefaultlibs  -Wl,--build-id=none  -ggdb
 CPPFLAGS:=$(CFLAGS)
 LIBS:=-L/opt/cross/lib/gcc/i686-elf/6.4.0  -lgcc
 
@@ -17,9 +17,11 @@ pic.o \
 kmalloc.o \
 kstdlib.o \
 list.o \
-kbd.o  \
 chrdev.o \
 fifo.o \
+ps2.o  \
+keyboard.o 
+
 
 all: myos.bin
 
