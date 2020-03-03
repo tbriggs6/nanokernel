@@ -211,8 +211,182 @@ static int kput_int(int value, int base)
   return count;
 }
 
+static int kput_int64(int value, int base)
+{
+  int64_t max_value = 1;
+  int64_t next_value;
+  int64_t started = 0;
+  int count = 0;
 
+  // short_circuit
+  if ((value >= 0) && (value < base) && (value < 10)) {
+    chrdev_putch(stdout, '0' + value);
+    return 1;
+  }
+  if ((value >= 0) && (value < base) && (value >= 10)) {
+    chrdev_putch(stdout, 'A' + (value-10));
+    return 1;
+  }
   
+  // find the overflow!
+  do {
+    max_value = max_value * base;
+    next_value = max_value * base;
+  } while ((next_value / base) == max_value);
+
+
+  // max_value now last value before overflow in this base
+
+  // handle leading negatives
+  if (value < 0) {
+    chrdev_putch(stdout, '-');
+    count++;
+  }
+
+  // divisor will start at greatest value
+  int64_t divisor = max_value;
+
+  // keep going while there is something to divide
+  while (divisor > 0) {
+
+    // get the digit
+    uint8_t digit = (value / divisor);
+
+    // skip leading zeros
+    if ((started || digit > 0)) {
+
+      // handle 0-9
+      if (digit < 10) {
+	chrdev_putch(stdout, '0' + digit);
+      }
+      // or base characters 
+      else {
+	chrdev_putch(stdout, 'A' + (digit-10));
+      }
+      started = 1;
+      count++;
+    }
+    
+    value = value % divisor;
+    divisor = divisor / base;
+  }
+
+  return count;
+}
+
+static int kput_uint(int value, int base)
+{
+  uint32_t max_value = 1;
+  uint32_t next_value;
+  uint32_t started = 0;
+  int count = 0;
+
+  // short_circuit
+  if ((value < base) && (value < 10)) {
+    chrdev_putch(stdout, '0' + value);
+    return 1;
+  }
+  if ((value < base) && (value >= 10)) {
+    chrdev_putch(stdout, 'A' + (value-10));
+    return 1;
+  }
+  
+  // find the overflow!
+  do {
+    max_value = max_value * base;
+    next_value = max_value * base;
+  } while ((next_value / base) == max_value);
+
+
+  // divisor will start at greatest value
+  uint32_t divisor = max_value;
+
+  // keep going while there is something to divide
+  while (divisor > 0) {
+
+    // get the digit
+    uint8_t digit = (value / divisor);
+
+    // skip leading zeros
+    if ((started || digit > 0)) {
+
+      // handle 0-9
+      if (digit < 10) {
+	chrdev_putch(stdout, '0' + digit);
+      }
+      // or base characters 
+      else {
+	chrdev_putch(stdout, 'A' + (digit-10));
+      }
+      started = 1;
+      count++;
+    }
+    
+    value = value % divisor;
+    divisor = divisor / base;
+  }
+
+  return count;
+}
+
+
+static int kput_uint64(uint64_t value, int base)
+{
+  uint64_t max_value = 1;
+  uint64_t next_value;
+  uint64_t started = 0;
+  int count = 0;
+
+  // short_circuit
+  if ((value < base) && (value < 10)) {
+    chrdev_putch(stdout, '0' + value);
+    return 1;
+  }
+  if ((value < base) && (value >= 10)) {
+    chrdev_putch(stdout, 'A' + (value-10));
+    return 1;
+  }
+  
+  // find the overflow!
+  do {
+    max_value = max_value * base;
+    next_value = max_value * base;
+  } while ((next_value / base) == max_value);
+
+
+  // divisor will start at greatest value
+  int32_t divisor = max_value;
+
+  // keep going while there is something to divide
+  while (divisor > 0) {
+
+    // get the digit
+    uint8_t digit = (value / divisor);
+
+    // skip leading zeros
+    if ((started || digit > 0)) {
+
+      // handle 0-9
+      if (digit < 10) {
+	chrdev_putch(stdout, '0' + digit);
+      }
+      // or base characters 
+      else {
+	chrdev_putch(stdout, 'A' + (digit-10));
+      }
+      started = 1;
+      count++;
+    }
+    
+    value = value % divisor;
+    divisor = divisor / base;
+  }
+
+  return count;
+}
+
+
+
 int kprintf(const char *format, ...) {
 
   va_list args;
@@ -220,13 +394,16 @@ int kprintf(const char *format, ...) {
   
   int state = 0;
   int count = 0;
-  
+  int longval = 0;
+
   while (*format != NULL) {
 
     switch(state) {
     case 0:
-      if (*format == '%')
-	state = 1;
+      if (*format == '%') {
+        longval = *(format+1) == 'L' ? 1 : 0;
+	      state = 1;
+      }
       else if (*format == '\\')
 	state = 2;
       else {
@@ -237,14 +414,33 @@ int kprintf(const char *format, ...) {
 
     case 1:
       if (*format == 'd') {
-	int v = va_arg(args, int);
-	count+=kput_int(v, 10);
-	state = 0;
+        if (longval) {
+          int64_t v = va_arg(args, int64_t);
+	        count+=kput_int64(v, 10);
+	        state = 0;
+        }
+        else {
+          int v = va_arg(args, int);
+	        count+=kput_int(v, 10);
+	        state = 0;
+          }
       }
       else if (*format == 'x') {
-	int v = va_arg(args, int);
-	count+=kput_int(v, 16);
-	state = 0;
+        if (longval) {
+          int64_t v = va_arg(args, int64_t);
+	        count+=kput_uint64(v, 16);
+	        state = 0;
+        }
+        else {
+          int v = va_arg(args, int);
+	        count+=kput_uint(v, 16);
+	        state = 0;
+          }
+      }
+      else if (*format == 'p') {
+          int v = va_arg(args, void *);
+	        count+=kput_uint(v, 16);
+	        state = 0;
       }
       else if (*format == 's') {
 	const char *ptr = va_arg(args, const char *);
