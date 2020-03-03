@@ -25,6 +25,11 @@ stack_top:
 .section .text
 	.global _start
 _start:
+	# grub put multiboot info table and magic in %ebx  and %eax respectively
+	movl	$stack_top, %esp
+	push	%eax
+	push 	%ebx
+
 	# make sure that we are in protected mode
 	movl 	%cr0, %eax
 	orl	$(1<<0), %eax
@@ -45,7 +50,6 @@ _next:
 	movw	%ax, %ss
 
   	# setup a stack
-  	movl	$stack_top, %esp
 	call 	kmain
 
 	cli
