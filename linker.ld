@@ -24,6 +24,8 @@ SECTIONS
 	.rodata BLOCK(4K) : ALIGN(4K)
 	{
 		*(.rodata)
+		/* built-in executables */
+		*(.builtin*)
 	}
 
 	/* Read-write data (initialized) */

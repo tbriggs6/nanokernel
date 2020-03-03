@@ -20,15 +20,20 @@ list.o \
 chrdev.o \
 fifo.o \
 ps2.o  \
-keyboard.o 
+keyboard.o  \
+builtin.o \
+lib/elf.o \
 
 
-all: myos.bin
+all: myos.bin idle.bin
 
 .PHONEY: all clean iso run-qemu
 
 myos.bin: $(OBJS) linker.ld
 	$(LD) -T linker.ld -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
+
+idle.bin: idle.o linker.ld
+	$(CC) $(CFLAGS) -o idle.bin idle.o
 
 %.o: %.c
 	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS) $(CPPFLAGS)
