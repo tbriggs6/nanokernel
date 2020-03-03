@@ -42,14 +42,14 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   console_init( COLOR_BLUE );
 
   kprintf("*********** KERNEL *****************\n");
-  kprintf("Multiboot ptr: %d, magic: %d\n", multiboot_ptr, multiboot_magic);
+  kprintf("Multiboot ptr: %x, magic: %x\n", multiboot_ptr, multiboot_magic);
 
   kprintf("Memory segments: \n");
   int num_entries = multiboot_ptr->mmap_length / (sizeof(multiboot_memory_map_t));
   multiboot_memory_map_t *entry = (multiboot_memory_map_t *) multiboot_ptr->mmap_addr;
   int i;
   for (i = 0; i < num_entries; i++) {
-    kprintf("%d %d %d %d\n", entry[i].addr, entry[i].len, entry[i].size, entry[i].type);
+    kprintf("%x %x %x %x\n", entry[i].addr, entry[i].len, entry[i].size, entry[i].type);
   }
 
 
