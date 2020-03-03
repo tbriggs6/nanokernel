@@ -10,6 +10,7 @@
 #include "ps2.h"
 #include "keyboard.h"
 #include "kmalloc.h"
+#include "multiboot.h"
 
 void handle_error( )
 {
@@ -21,7 +22,7 @@ extern uint32_t *_heap_size;
 extern uint32_t *_heap_start;
 extern uint32_t *_heap_end;
 
-void kmain(void)
+void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 {
 
   // create a heap
@@ -39,6 +40,18 @@ void kmain(void)
 
   // sets stdout
   console_init( COLOR_BLUE );
+
+  kprintf("*********** KERNEL *****************\n");
+  kprintf("Multiboot ptr: %d, magic: %d\n", multiboot_ptr, multiboot_magic);
+
+  kprintf("Memory segments: \n");
+  int num_entries = multiboot_ptr->mmap_length / (sizeof(multiboot_memory_map_t));
+  multiboot_memory_map_t *entry = (multiboot_memory_map_t *) multiboot_ptr->mmap_addr;
+  int i;
+  for (i = 0; i < num_entries; i++) {
+    kprintf("%d %d %d %d\n", entry[i].addr, entry[i].len, entry[i].size, entry[i].type);
+  }
+
 
   kprintf("Enabling keyboard\n");
   
