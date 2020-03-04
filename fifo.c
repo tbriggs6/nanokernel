@@ -29,7 +29,7 @@ void fifo_init(fifo_t *fifo, size_t max_entries, size_t entry_size)
   fifo->entry_size = entry_size;
   fifo->entries = (uint8_t *) kmalloc( max_entries * entry_size);
   if (fifo->entries == NULL) {
-    kprintf("Error - cannot allocate %d bytes\n", (max_entries * entry_size));
+    kprintf("Error - cannot allocate %lu bytes\n", (max_entries * entry_size));
   }
 }
 

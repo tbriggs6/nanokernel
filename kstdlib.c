@@ -274,7 +274,7 @@ static int kput_int64(int value, int base)
   return count;
 }
 
-static int kput_uint(int value, int base)
+static int kput_uint(unsigned int value, unsigned int base)
 {
   uint32_t max_value = 1;
   uint32_t next_value;
@@ -330,7 +330,7 @@ static int kput_uint(int value, int base)
 }
 
 
-static int kput_uint64(uint64_t value, int base)
+static int kput_uint64(uint64_t value, unsigned int base)
 {
   uint64_t max_value = 1;
   uint64_t next_value;
@@ -355,7 +355,7 @@ static int kput_uint64(uint64_t value, int base)
 
 
   // divisor will start at greatest value
-  int32_t divisor = max_value;
+  uint64_t divisor = max_value;
 
   // keep going while there is something to divide
   while (divisor > 0) {
@@ -400,20 +400,29 @@ int kprintf(const char *format, ...) {
 
     switch(state) {
     case 0:
-      if (*format == '%') {
-        longval = *(format+1) == 'L' ? 1 : 0;
-	      state = 1;
+      if (*format == '%')  {
+        state = 1;
+        longval = 0;
       }
+
       else if (*format == '\\')
-	state = 2;
+	      state = 2;
       else {
-	chrdev_putch(stdout, *format);
-	count++;
+	      chrdev_putch(stdout, *format);
+	      count++;
       }
       break;
 
     case 1:
-      if (*format == 'd') {
+      if (*format == 'L') {
+        state = 1;
+        longval = 1;
+      }
+      else if (*format == 'l') {
+        state = 1;
+      }
+
+      else if (*format == 'd') {
         if (longval) {
           int64_t v = va_arg(args, int64_t);
 	        count+=kput_int64(v, 10);
@@ -425,9 +434,21 @@ int kprintf(const char *format, ...) {
 	        state = 0;
           }
       }
-      else if (*format == 'x') {
+      else if (*format == 'u') {
         if (longval) {
           int64_t v = va_arg(args, int64_t);
+	        count+=kput_uint64(v, 10);
+	        state = 0;
+        }
+        else {
+          int v = va_arg(args, int);
+	        count+=kput_uint(v, 10);
+	        state = 0;
+          }
+      }
+      else if (*format == 'x') {
+        if (longval) {
+          uint64_t v = va_arg(args, uint64_t);
 	        count+=kput_uint64(v, 16);
 	        state = 0;
         }
@@ -438,19 +459,19 @@ int kprintf(const char *format, ...) {
           }
       }
       else if (*format == 'p') {
-          int v = va_arg(args, void *);
+          unsigned int v = (unsigned int) va_arg(args, void *);
 	        count+=kput_uint(v, 16);
 	        state = 0;
       }
       else if (*format == 's') {
-	const char *ptr = va_arg(args, const char *);
-	count+=kput_str(ptr);
-	state = 0;
+	      const char *ptr = va_arg(args, const char *);
+	      count+=kput_str(ptr);
+	      state = 0;
       }
       else if (*format == '%') {
-	chrdev_putch(stdout, '%');
-	state = 0;
-	count++;
+	      chrdev_putch(stdout, '%');
+	      state = 0;
+	      count++;
       }
       break;
 
@@ -512,3 +533,7 @@ inline void kenable_interrupts( )
 }
 
 
+void panic( )
+{
+  while(1); 
+}

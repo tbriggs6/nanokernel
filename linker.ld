@@ -38,6 +38,7 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 		*(.stack)
+		. += 64K;
 	}
 	.heap BLOCK(4K) : ALIGN(4K) 
 	{
