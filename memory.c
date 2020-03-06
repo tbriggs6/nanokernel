@@ -15,6 +15,10 @@ extern uint32_t  *_heap_end;
 #define PAGE_SIZE (4096)
 #define MEM_START (0x100000)
 
+typedef struct {
+    
+}
+
 static uint32_t multiboot_size_bytes(multiboot_info_t *multiboot_ptr)
 {
     uint32_t i;
