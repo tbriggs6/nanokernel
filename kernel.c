@@ -60,6 +60,9 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   
   memory_init(multiboot_ptr);
 
+  // initialze paging....
+  page_init( );
+
   kprintf("Enabling keyboard\n");
   
   keyboard_handler_t keyboard;
