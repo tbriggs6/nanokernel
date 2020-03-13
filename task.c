@@ -29,5 +29,8 @@ void task_fork(task_t *task)
     child.pid = task_next_pid( );
     child.parent_pid = task->pid;
     kmemcpy(&child.tss, task->tss, sizeof(task));
-    
+    git 
 }
+
+
+void task_create_from_elf(task_t *task, )
