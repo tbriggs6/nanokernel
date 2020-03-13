@@ -122,7 +122,6 @@ uint32_t memory_find_free_page( )
     uint32_t page_num = (i * 32) + j;
     uint32_t address = page_num * PAGE_SIZE;
 
-    kprintf("Returning %x as address of free page %x\n", address, page_num);
     return address;
 }
 
@@ -262,8 +261,6 @@ static void page_create_dirent(page_directory_t *directory, uint32_t virtual)
     directory->entry[index].page_addr = table_address >> 12;
     directory->entry[index].present = 1;
 
-    kprintf("Created paging dirent for virt: %x, index: %u, table_addr: %x\n", 
-        virtual,index, table_address);
 }
 
 /**
@@ -308,13 +305,11 @@ static void page_set_map(page_directory_t *directory, uint32_t virtual, uint32_t
 
 void page_turn_on( )
 {
-    kprintf("Loading %x into CR3\n", &_kernel_page_directory);
-
     lcr3((uint32_t ) &_kernel_page_directory);
     
     uint32_t old = rcr0();
     uint32_t new = old | 0x80000001;
-    kprintf("Loading %x into CR0\n", new);
+    
     lcr0(new);
 }
 
@@ -353,7 +348,6 @@ void page_init( )
 {
     // this *must* be called *before* enabling paging ....
     kprintf("**********************\n");
-    kprintf("Enabling paging\n");
     kprintf("kernel page start: %x\n",(unsigned) &_kernel_page_directory);
 
     // find a 4KB page for the page-directory
@@ -366,12 +360,10 @@ void page_init( )
     uint32_t start = PAGE_SIZE;
     uint32_t end = (uint32_t) &_kernel_end;
 
-    kprintf("Adding page mapping for %x to %x\n", start, end);
     for (addr= start; addr < end; addr+= 4096) {
         page_set_map(kpage_dir, addr, addr);
     }  
 
-page_debug();
     page_turn_on();
 }
 
