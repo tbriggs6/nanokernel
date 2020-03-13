@@ -9,6 +9,7 @@ SECTIONS
 	/* Begin putting sections at 1 MiB, a conventional place for kernels to be
 	   loaded at by the bootloader. */
 	. = 1M;
+	_kernel_start = .;
 
 	/* First put the multiboot header, as it is required to be put very early
 	   early in the image or the bootloader won't recognize the file format.
@@ -30,14 +31,20 @@ SECTIONS
 	.data BLOCK(4K) : ALIGN(4K)
 	{
 		*(.data)
-	}
-
+		_kernel_gdt = ALIGN(4K);
+		. += 4K;
+		_kernel_page_directory = ALIGN(4K);
+		. += 4K;
+		_kernel_tss = ALIGN(4K);
+		. += 4K;
+	}	
 	/* Read-write data (uninitialized) and stack */
 	.bss BLOCK(4K) : ALIGN(4K)
 	{
 		*(COMMON)
 		*(.bss)
 		*(.stack)
+		. += 64K;
 	}
 	.heap BLOCK(4K) : ALIGN(4K) 
 	{
@@ -46,8 +53,9 @@ SECTIONS
 	    _heap_end = _heap_start + 1M;
 	    _heap_size = (_heap_end - _heap_start);
 	    KEEP(*(.heap)) 
-        }
- 
+    }
+	_kernel_end = .;
+	_kernel_size = (_kernel_end - _kernel_start);
 	/* The compiler may produce other sections, put them in the proper place in
 	   in this file, if you'd like to include them in the final kernel. */
 }

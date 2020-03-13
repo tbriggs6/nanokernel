@@ -1,2 +1,3 @@
 target remote localhost:1234
 symbol-file myos.bin
+b page_turn_on

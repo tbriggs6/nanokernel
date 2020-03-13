@@ -61,37 +61,12 @@ void err_handler(int err_num)
 
 void int_handler(int int_num)
 {
-
   
-  kprintf("INT %d\n", int_num);
-  
-  char c = 0;
-  switch(int_num) {
-  case 32: console_puts("INT 32"); break;
-  case 33:
-    console_puts("INT 33");
-    break;
-  case 34: console_puts("INT 34"); break;
-  case 35: console_puts("INT 35"); break;
-  case 36: console_puts("INT 36"); break;
-  case 37: console_puts("INT 37"); break;
-  case 38: console_puts("INT 38"); break;
-  case 39: console_puts("INT 39"); break;
-  case 40: console_puts("INT 40"); break;
-  case 41: console_puts("INT 41"); break;
-  case 42: console_puts("INT 42"); break;
-  case 43: console_puts("INT 43"); break;
-  case 44: console_puts("INT 44"); break;
-  case 45: console_puts("INT 45"); break;
-  case 46: console_puts("INT 46"); break;
-  case 47: console_puts("INT 47"); break;
-  case 48: console_puts("INT 48"); break;
-  default: console_puts("INT UNKNOWN"); break;
-  }
-
-
   if (handlers[int_num] != NULL) {
     handlers[int_num](int_num);
+  }
+  else {  
+    kprintf("_INT(%d)_", int_num);
   }
   
   pic_end_interrupt(int_num - 32);
