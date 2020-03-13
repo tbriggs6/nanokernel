@@ -532,7 +532,6 @@ inline void kenable_interrupts( )
   sti( );
 }
 
-
 void panic( )
 {
   while(1); 

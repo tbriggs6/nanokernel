@@ -50,5 +50,8 @@ void memory_init(multiboot_info_t *multiboot_ptr);
 uint32_t memory_find_free_page( );
 void memory_free_page(uint32_t page);
 void page_init( );
+void page_copy_to_user(void *kernel_mem, page_directory_t *dest, uint32_t virtual, uint32_t bytes);
+void page_copy_process_memory(page_directory_t *src, page_directory_t *dest);
+void page_create_memory(page_directory_t *dir, uint32_t virtual, uint32_t size);
 
 #endif

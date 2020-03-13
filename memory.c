@@ -131,7 +131,7 @@ uint32_t memory_find_free_page( )
  * */
 static void memory_build_data_structs(multiboot_info_t *multiboot_ptr)
 {
-    // get the number of bytes (e.g. 2GB)
+    // get the number  of bytes (e.g. 2GB)
     uint32_t bytes = multiboot_size_bytes(multiboot_ptr);
 
     // get the number of pages (e.g. 2GB / 4KB = 524,288 pages)
@@ -281,6 +281,15 @@ static void page_create_map(page_table_t *table, uint32_t virtual, uint32_t phys
     table->entry[table_index].present = 1;
 }
 
+static void page_delete_map(page_table_t *table, uint32_t virtual)
+{
+    uint32_t table_index = page_table_for_virtual(virtual);
+    
+    // kprintf("page_create_map(%x,%x,%x), idx=%d\n", table, virtual, physical, table_index);
+    // store upper 20bit of address for physical table
+    table->entry[table_index].value = 0;
+}
+
 /*
  * add an entry to map the physical and virtual address in the indicated page table 
  */
@@ -303,6 +312,29 @@ static void page_set_map(page_directory_t *directory, uint32_t virtual, uint32_t
     page_create_map(table, virtual, physical);
 }
 
+
+/*
+ * add an entry to map the physical and virtual address in the indicated page table 
+ */
+static void page_clear_map(page_directory_t *directory, uint32_t virtual)
+{
+    // directory entry
+    unsigned int directory_pos = page_directory_for_virtual(virtual);
+    
+    // is page present?
+    if (directory->entry[directory_pos].present == 0) {
+        // then nothing to do here...
+        return;
+    }
+
+    // table exists (now) - get its address from the directory
+    uint32_t table_addr = directory->entry[directory_pos].page_addr << 12;
+    page_table_t *table = (page_table_t *) table_addr;
+
+    // establish th emapping between physical and virtual addresses.
+    page_delete_map(table, virtual);
+}
+
 void page_turn_on( )
 {
     lcr3((uint32_t ) &_kernel_page_directory);
@@ -315,7 +347,7 @@ void page_turn_on( )
 
 void page_debug( )
 {
-    kprintf("****| PAGE DIR @ %x|****\n", kpage_dir);
+    kprintf("****| PAGE DIR @ %p|****\n", kpage_dir);
     
     int i,j, num_present =0;
     for (i = 0; i < 1024; i++) {
@@ -332,11 +364,128 @@ void page_debug( )
             for (j = 0; j < 1024; j++) {
                 if (table->entry[j].present) {
                     uint32_t phy = (i << 22) + (j << 12);
-                    kprintf(" entry[%d/%x->%x] ", j,phy, table->entry[j].page_addr << 12);
+                    kprintf(" entry[%d/%x->%x] ", j,(unsigned)phy, (unsigned)(table->entry[j].page_addr << 12));
                 }
             }
             kprintf("\n");
         }
+    }
+}
+
+static uint32_t page_find_next_virtual(page_directory_t *dir)
+{
+    int i,j;
+
+    i = 1;
+    // start scanning the page_directory
+    while (i < 1024) {
+        if (dir->entry[i].present == 0) {
+             page_create_dirent(dir, i);
+        }
+        // look for the page_table
+        j = 0;
+        page_table_t *table = (page_table_t *)(dir->entry[i].page_addr << 12);
+
+        // look for a vacancy
+        while (j < 1024) {
+            if (table->entry[j].present == 0) {
+                return (i << 22) | (j << 12);
+            }
+        }
+    }
+
+    kprintf("Error - no virtual pages in directory\n");
+    panic();
+    return -1;
+}
+
+
+void page_copy_from_user(page_directory_t *src, uint32_t virtual, void *kernel_mem, uint32_t bytes)
+{
+    uint32_t current = virtual;
+    uint32_t kern_virtual = page_find_next_virtual(kpage_dir);
+
+    while (bytes > 0) {
+        // the kernel already has the page-directories in its virtual space (it manages them)
+        // but it needs to nab the physical memory for the user to make a copy
+        uint32_t diridx = page_directory_for_virtual(current);
+        uint32_t tabidx = page_table_for_virtual(current);
+
+        page_table_t *src_tbl = (page_table_t *)(src->entry[diridx].page_addr << 12);
+        uint32_t src_phys = (src_tbl->entry[tabidx].page_addr << 12);
+    
+        page_set_map(kpage_dir, kern_virtual, src_phys);
+
+        uint32_t size = (bytes < PAGE_SIZE) ? bytes : PAGE_SIZE;
+        kmemcpy((void *)kernel_mem, (void *) kern_virtual, size);
+
+        bytes = bytes - size;       // subtract bytes copied
+        current = current + bytes;  // move current to next block
+    }
+
+    // we're done with the kernel's virtual address
+    page_clear_map(kpage_dir, kern_virtual);
+}
+
+void page_copy_to_user(void *kernel_mem, page_directory_t *dest, uint32_t virtual, uint32_t bytes)
+{
+    uint32_t current = virtual;
+    uint32_t kern_virtual = page_find_next_virtual(kpage_dir);
+
+    while (bytes > 0) {
+        // the kernel already has the page-directories in its virtual space (it manages them)
+        // but it needs to nab the physical memory for the user to make a copy
+        uint32_t diridx = page_directory_for_virtual(current);
+        uint32_t tabidx = page_table_for_virtual(current);
+
+        page_table_t *dest_tbl = (page_table_t *)(dest->entry[diridx].page_addr << 12);
+        uint32_t dest_phys = (dest_tbl->entry[tabidx].page_addr << 12);
+    
+        page_set_map(kpage_dir, kern_virtual, dest_phys);
+
+        uint32_t size = (bytes < PAGE_SIZE) ? bytes : PAGE_SIZE;
+        kmemcpy((void *)kern_virtual, (void *)kernel_mem, size);
+
+        bytes = bytes - size;       // subtract bytes copied
+        current = current + bytes;  // move current to next block
+    }
+
+    // we're done with the kernel's virtual address
+    page_clear_map(kpage_dir, kern_virtual);
+}
+
+
+void page_copy_process_memory(page_directory_t *src, page_directory_t *dest)
+{
+    int i,j;
+    uint8_t *kpage = (uint8_t *) kmalloc(PAGE_SIZE);
+    for (i = 0; i < 1024; i++) {
+        if (src->entry[i].present) {
+
+            page_table_t *src_table = (page_table_t *) (src->entry[i].page_addr<<12);
+
+            for (j = 0; j < 1024; j++) {
+                if (src_table->entry[j].present == 0) 
+                    continue;
+
+                uint32_t virtual = (i << 22) | (j << 12);
+                page_copy_from_user(src, virtual, kpage, PAGE_SIZE);
+                page_copy_to_user(kpage, dest, virtual, PAGE_SIZE);
+            }
+        }
+    }
+
+    kfree(kpage);
+}
+
+
+// create a memoryspace with indicated 
+void page_create_memory(page_directory_t *dir, uint32_t virtual, uint32_t size)
+{
+    uint32_t i = 0;
+    for (i = 0; i < size; i+=4096) {
+        uint32_t physical = memory_find_and_alloc_page();
+        page_set_map(dir, virtual+i, physical);
     }
 }
 
