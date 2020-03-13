@@ -11,6 +11,7 @@
 #include "keyboard.h"
 #include "kmalloc.h"
 #include "multiboot.h"
+#include "memory.h"
 
 void handle_error( )
 {
@@ -21,6 +22,18 @@ void handle_error( )
 extern uint32_t *_heap_size;
 extern uint32_t *_heap_start;
 extern uint32_t *_heap_end;
+
+void show_mem(multiboot_info_t *multiboot_ptr)
+{
+  kprintf("Memory segments: \n");
+  int num_entries = multiboot_ptr->mmap_length / (sizeof(multiboot_memory_map_t));
+  multiboot_memory_map_t *entry = (multiboot_memory_map_t *) multiboot_ptr->mmap_addr;
+  int i;
+  for (i = 0; i < num_entries; i++) {
+    kprintf("%Lx %Lx %x %x\n", entry[i].addr, entry[i].len, entry[i].size, entry[i].type);
+  }
+
+}
 
 void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 {
@@ -42,16 +55,13 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   console_init( COLOR_BLUE );
 
   kprintf("*********** KERNEL *****************\n");
-  kprintf("Multiboot ptr: %x, magic: %x\n", multiboot_ptr, multiboot_magic);
+  kprintf("Multiboot ptr: %p, magic: %lx\n", multiboot_ptr, multiboot_magic);
+  show_mem(multiboot_ptr);
+  
+  memory_init(multiboot_ptr);
 
-  kprintf("Memory segments: \n");
-  int num_entries = multiboot_ptr->mmap_length / (sizeof(multiboot_memory_map_t));
-  multiboot_memory_map_t *entry = (multiboot_memory_map_t *) multiboot_ptr->mmap_addr;
-  int i;
-  for (i = 0; i < num_entries; i++) {
-    kprintf("%x %x %x %x\n", entry[i].addr, entry[i].len, entry[i].size, entry[i].type);
-  }
-
+  // initialze paging....
+  page_init( );
 
   kprintf("Enabling keyboard\n");
   

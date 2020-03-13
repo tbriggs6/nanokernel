@@ -31,7 +31,8 @@ int toupper(char ch);
 int tolower(char ch);
 long int kstrtol(const char *nptr, char **endptr, int base);
 int katoi(const char *nptr);
-int kprintf(const char *format, ...);
+
+int kprintf(const char *format, ...) __attribute__((format(printf, 1,2)));
 char getchar( );
 char *gets(char *s);
 void putc(char ch);
@@ -39,4 +40,5 @@ void putc(char ch);
 void kdisable_interrupts( );
 void kenable_interrupts( );
 
+void panic( );
 #endif

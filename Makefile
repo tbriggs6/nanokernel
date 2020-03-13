@@ -20,7 +20,8 @@ list.o \
 chrdev.o \
 fifo.o \
 ps2.o  \
-keyboard.o 
+keyboard.o  \
+memory.o
 
 
 all: myos.bin
