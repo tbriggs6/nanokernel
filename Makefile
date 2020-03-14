@@ -9,6 +9,7 @@ LIBS:=-L/opt/cross/lib/gcc/i686-elf/6.4.0  -lgcc
 
 OBJS:=\
 boot.o \
+builtin.o \
 kernel.o \
 console.o \
 intr.o \
@@ -22,8 +23,8 @@ fifo.o \
 ps2.o  \
 keyboard.o  \
 memory.o \
-builtin.o \
-lib/elf.o 
+lib/elf.o \
+task.o
 
 
 all: myos.bin idle.bin

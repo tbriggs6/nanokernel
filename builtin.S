@@ -3,4 +3,5 @@
 
 .section .builtin
 .global _idletask_start
+_idletask_start:
 .incbin "idle.bin"

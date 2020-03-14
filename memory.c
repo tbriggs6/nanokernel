@@ -489,6 +489,15 @@ void page_create_memory(page_directory_t *dir, uint32_t virtual, uint32_t size)
     }
 }
 
+/**
+ * Allocates a page of kernel memory - returns a pointer to kernel memory
+ **/
+uint32_t page_kernel_alloc_page( )
+{
+    uint32_t address = memory_find_and_alloc_page( );
+    page_set_map(&kpage_dir, address, address);
+    return address;
+}
 
 /**
  * Initialize the page-directory for the kernel itself

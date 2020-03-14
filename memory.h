@@ -53,5 +53,6 @@ void page_init( );
 void page_copy_to_user(void *kernel_mem, page_directory_t *dest, uint32_t virtual, uint32_t bytes);
 void page_copy_process_memory(page_directory_t *src, page_directory_t *dest);
 void page_create_memory(page_directory_t *dir, uint32_t virtual, uint32_t size);
+uint32_t page_kernel_alloc_page( );
 
 #endif

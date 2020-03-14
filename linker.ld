@@ -27,6 +27,7 @@ SECTIONS
 		*(.rodata)
 		/* built-in executables */
 		*(.builtin*)
+		 KEEP(*(.rodata)) 
 	}
 
 	/* Read-write data (initialized) */

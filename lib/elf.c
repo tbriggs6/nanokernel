@@ -64,7 +64,11 @@ static int validate_header(elf_header_t *header)
 }
 
 
-static int handle_program_header(const char *elf_start, const elf_program_header_t *pheader, void *(*virt_alloc)(uint32_t virt_start, uint32_t length))
+static int handle_program_header(const char *elf_start, 
+    const elf_program_header_t *pheader, 
+    void *task_data,  
+    void *(*virt_alloc)(uint32_t virt_start, uint32_t length, void *alloc_data),
+    void *(*virt_copy)(uint32_t dest, uint32_t src, uint32_t len, void *copy_data))
 {
     DBPRINT("PHEADER type:%u offset:%u vaddr:%x paddr:%x size:%u memsz:%u segflags:%u align:%u\n",
         pheader->p_type, pheader->p_offset, pheader->p_vaddr,
@@ -72,8 +76,8 @@ static int handle_program_header(const char *elf_start, const elf_program_header
         pheader->p_segflags, pheader->p_align);
 
     if (pheader->p_type == PT_LOAD) {
-        void *ptr = virt_alloc(pheader->p_vaddr, pheader->p_memsz);
-        MEMCPY(ptr, elf_start + pheader->p_offset, pheader->p_filesz);
+        void *ptr = virt_alloc(pheader->p_vaddr, pheader->p_memsz, task_data);
+        virt_copy(ptr, elf_start + pheader->p_offset, pheader->p_filesz, task_data);
     }
 
     return 0;
@@ -102,7 +106,9 @@ static char *fetch_string(const char *elf_start, uint32_t string_offset)
  * data - a pointer to the elf file's data image
  * alloc - a function to allocate memory, given a virtual address and size
  * */
-int read_elf(const char *elf_start, void *(*virt_alloc)(uint32_t virt_start, uint32_t length))
+int read_elf(const char *elf_start, void *task_data, 
+    void *(*virt_alloc)(uint32_t virt_start, uint32_t length, void *alloc_data),
+    void (*virt_copy)(uint32_t dest, uint32_t src, uint32_t len, void *copy_data))
 {
     elf_header_t *header = (elf_header_t *) elf_start;
 
@@ -116,7 +122,7 @@ int read_elf(const char *elf_start, void *(*virt_alloc)(uint32_t virt_start, uin
     
     int i;
     for (i = 0; i < header->program_header_num; i++) {
-        handle_program_header(elf_start, &pheaders[i], virt_alloc);
+        handle_program_header(elf_start, &pheaders[i], task_data, virt_alloc, virt_copy);
     }
 
     return 0;
