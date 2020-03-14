@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+<<<<<<< HEAD
             "name": "(gdb) Launch",
             "type": "shell",
             "request": "launch",
@@ -12,6 +13,15 @@
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
+=======
+            "name": "gcc build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/opsys/nano_kernel/lib/test_elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/opsys/nano_kernel/lib",
+>>>>>>> origin/3-handle-elf-executable-2
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -21,7 +31,13 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
+<<<<<<< HEAD
             ]
+=======
+            ],
+            //"preLaunchTask": "gcc build active file",
+            "miDebuggerPath": "/usr/bin/gdb"
+>>>>>>> origin/3-handle-elf-executable-2
         }
     ]
 }

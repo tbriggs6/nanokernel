@@ -12,6 +12,7 @@
 #include "kmalloc.h"
 #include "multiboot.h"
 #include "memory.h"
+#include "task.h"
 
 void handle_error( )
 {
@@ -22,6 +23,7 @@ void handle_error( )
 extern uint32_t *_heap_size;
 extern uint32_t *_heap_start;
 extern uint32_t *_heap_end;
+extern uint32_t *_idletask_start;
 
 void show_mem(multiboot_info_t *multiboot_ptr)
 {
@@ -71,24 +73,29 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   keyboard_init_handler(&keyboard);
   ps2_init(&keyboard);
 
-  // sets stdin
-  
 
+  // sigh...
+  kprintf("Starting task manager.....\n");
+  task_init( );
+  task_t task;
+  task_create_from_elf(&task, &_idletask_start);
+  kprintf("Built-In tasks are loaded!\n");
   kprintf("Finished init\n");
+
   asm volatile ("sti");
 
-  while(1) {
-    if (keyboard.keyboard_haschar(&keyboard))
-    {
-      char ch = keyboard.keyboard_getchar(&keyboard);
-      putc(ch);
-    }
-    else {
-      nop();
-    }
-  }
+  // while(1) {
+  //   if (keyboard.keyboard_haschar(&keyboard))
+  //   {
+  //     char ch = keyboard.keyboard_getchar(&keyboard);
+  //     putc(ch);
+  //   }
+  //   else {
+  //     nop();
+  //   }
+  // }
 
-  
+  // dispatching to the scheduler!!!
 
 
   // stoopd program

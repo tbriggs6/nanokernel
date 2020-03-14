@@ -9,6 +9,7 @@ LIBS:=-L/opt/cross/lib/gcc/i686-elf/6.4.0  -lgcc
 
 OBJS:=\
 boot.o \
+builtin.o \
 kernel.o \
 console.o \
 intr.o \
@@ -21,15 +22,21 @@ chrdev.o \
 fifo.o \
 ps2.o  \
 keyboard.o  \
-memory.o
+bitmap.o \
+memory.o \
+lib/elf.o \
+task.o
 
 
-all: myos.bin
+all: myos.bin idle.bin
 
 .PHONEY: all clean iso run-qemu
 
 myos.bin: $(OBJS) linker.ld
 	$(LD) -T linker.ld -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
+
+idle.bin: idle.o linker.ld
+	$(CC) $(CFLAGS) -o idle.bin idle.o
 
 %.o: %.c
 	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS) $(CPPFLAGS)

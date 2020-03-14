@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "bitmap.h"
 #include "multiboot.h"
 #include "memory.h"
 #include "kstdlib.h"
@@ -7,14 +8,11 @@
 extern uint32_t  _kernel_size;
 extern uint32_t  _kernel_start;
 extern uint32_t  _kernel_end;
-extern page_directory_t  *_kernel_page_directory;
-
-static uint32_t *memory_alloc_bitmap = NULL;
-static uint32_t memory_num_pages = 0;
-static uint32_t memory_num_free_pages = 0;
-static uint32_t memory_bitmap_entries = 0;
 
 static page_directory_t *kpage_dir = NULL;
+static bitmap_t *mem_free = NULL;
+static uint32_t memory_total_pages = 0;
+static uint32_t memory_alloc_pages = 0;
 
 #define PAGE_SIZE (4096)
 
@@ -44,112 +42,21 @@ static uint32_t multiboot_size_bytes(const multiboot_info_t const *multiboot_ptr
 }
 
 /**
- * memory_is_alloc - Determine if this memory address is allocated or not.
- * @param n the physical address.
- * @return 1 if the page is alloc, 0 otherwise.
- * **/
-static int memory_is_alloc(unsigned int physical_addr)
-{
-    // first compute the page number for the address
-    uint32_t page = physical_addr / PAGE_SIZE;
-    // compute which 32-bit word contains the page
-    uint32_t word = page / 32;
-    // compute the bit in the bitmap that represents the page
-    uint32_t bit = page % 32;
-
-    // access the memory free bitmap, and check its value.
-    uint32_t val = memory_alloc_bitmap[word];
-    if (((val >> bit) & 1) == 1) return 1;
-    else return 0;
-}
-
-
-/**
- * memory_page_alloc - marks a page of memory as being allocated.
- * @param physical_addr - the physical address to mark
- **/
-static void memory_page_alloc(unsigned int physical_addr)
-{
-    uint32_t word = physical_addr / 32;
-    uint32_t bit = physical_addr % 32;
-
-    uint32_t val = memory_alloc_bitmap[word];
-    val = val | (1 << bit);
-    memory_alloc_bitmap[word] = val;
-    memory_num_free_pages--;
-}
-
-/**
- * memory_page_free - mark a memory page free in the physical bitmap
- * @param physical_addr - the address
- */
-static void memory_page_free(unsigned int physical_addr)
-{
-    uint32_t word = physical_addr / 32;
-    uint32_t bit = physical_addr % 32;
-
-    uint32_t val = memory_alloc_bitmap[word];
-    val = val & ~(1 << bit);
-    memory_alloc_bitmap[word] = val;
-    memory_num_free_pages++;
-}
-
-/**
- * memory_find_free_page - find a free page in memory
- */
-uint32_t memory_find_free_page( )
-{
-    uint32_t i,j;
-
-    for (i = 0; i < memory_num_pages; i++) {
-        // if all pages are used, then we get 32-bits set....
-        if (memory_alloc_bitmap[i] != 0xffffffff)
-        break;
-    }
-    
-    if (i == memory_num_pages)  {
-        kprintf("ERROR - no free memory remains\n");
-        panic( );
-    }
-
-    // we found a page-alloc thats not used
-    // at this point, a page, between (i*32)+0 and (i*32)+31 is free
-    for (j = 0; j < 32; j++) {
-        if (!memory_is_alloc((i*32)+j))
-            break;
-    }
-
-    uint32_t page_num = (i * 32) + j;
-    uint32_t address = page_num * PAGE_SIZE;
-
-    return address;
-}
-
-/**
  * Determine the size of memory, and create the memory bitmaps from the 
  * multiboot information.
  * */
 static void memory_build_data_structs(multiboot_info_t *multiboot_ptr)
 {
-    // get the number of bytes (e.g. 2GB)
+    // get the number  of bytes (e.g. 2GB)
     uint32_t bytes = multiboot_size_bytes(multiboot_ptr);
 
     // get the number of pages (e.g. 2GB / 4KB = 524,288 pages)
-    memory_num_pages = bytes / PAGE_SIZE;
+    memory_total_pages = bytes / PAGE_SIZE;
+    memory_alloc_pages = memory_total_pages;
+
+    bitmap_init(mem_free, memory_total_pages);
+    bitmap_set_all(mem_free);
     
-    // each page is a bit, so get the number of 32-bit words to hold the pages
-    // each entry holds 32-bits (e.g. 16384 integers)
-    memory_bitmap_entries = memory_num_pages / 32;
-    if ((memory_bitmap_entries * 32) != memory_num_pages)
-        memory_bitmap_entries++;
-
-    // kmalloc this chunk from the heap (e.g. 16384 words = 65,536 bytes)
-    uint32_t num_bitmap_bytes = memory_bitmap_entries * sizeof(uint32_t);
-    memory_alloc_bitmap = (uint32_t *) kmalloc(num_bitmap_bytes);
-
-    // start each segment as allocated - we'll mark them as free if they 
-    // are usuable later on.
-    kmemset(memory_alloc_bitmap, 0xff, num_bitmap_bytes);
 }
 
 /**
@@ -161,8 +68,6 @@ static void memory_build_map_from_multiboot(multiboot_info_t *multiboot_ptr)
     // walk the multiboot table for memory, and find usable "high" memory
     uint64_t i,j;
 
-    memory_num_free_pages = 0;
-
     multiboot_memory_map_t *entries = (multiboot_memory_map_t *) multiboot_ptr->mmap_addr;
     unsigned int num_entries = multiboot_ptr->mmap_length / sizeof(multiboot_memory_map_t);
 
@@ -172,32 +77,13 @@ static void memory_build_map_from_multiboot(multiboot_info_t *multiboot_ptr)
         }
 
         for (j = 0; j < entries[i].len ; j+= PAGE_SIZE)  {
-            uint32_t address = (uint32_t) (entries[i].addr + +j);
-            
-            memory_page_free(address);
+            uint32_t address = (uint32_t) (entries[i].addr +j);
+            uint32_t page = address >> 12;
+            bitmap_clr(mem_free, page);
+            memory_alloc_pages--;
         }
 
     }
-
-    // reserve the first few pages of memory
-    memory_page_alloc(0);
-    memory_page_alloc(PAGE_SIZE);
-
-}
-
-/**
- * Find and allocate a single page of memory.
- * @return the address of the page.
- * **/
-uint32_t memory_find_and_alloc_page( )
-{
-    uint32_t address = memory_find_free_page( );
-    memory_page_alloc(address);
-
-    // zero out every page given out
-    kmemset((void *) address, 0, PAGE_SIZE);
-
-    return address;
 }
 
 /**
@@ -210,12 +96,38 @@ static void memory_mark_kernel_as_used( )
     uint32_t start = (uint32_t) &_kernel_start;
     uint32_t end = (uint32_t) &_kernel_end;
 
+    // reserve the first 64KB of low memory
+    for (addr = 0; addr < 64 * 1024; addr += 4096) {
+        uint32_t page = addr >> 12;
+        bitmap_set(mem_free, page);
+        memory_alloc_pages++;
+    }
+
+
     for (addr = start; addr <= end; addr+= 4096) {
-        if (!memory_is_alloc(addr)) {
-            memory_page_alloc(addr);
-        }
+        uint32_t page = addr >> 12;
+        bitmap_set(mem_free, page);
+        memory_alloc_pages++;
     }
 }
+
+uint32_t memory_find_and_alloc_page( )
+{
+    uint32_t page_num = bitmap_first_clear(mem_free);
+    bitmap_set(mem_free, page_num);
+    memory_alloc_pages++;
+
+    uint32_t addr = page_num << 12;
+    return addr;
+}
+
+static void memory_free_page(uint32_t addr)
+{
+    uint32_t page_num = addr >> 12;
+    bitmap_clr(mem_free, page_num);
+    memory_alloc_pages--;
+}
+
 
 /**
  * +----------------------+----------------------+------------------+
@@ -234,78 +146,10 @@ unsigned int page_table_for_virtual(uint32_t virtual)
     return (virtual >> 12) & 0x3ff;  // middle-10 bits
 }
 
-static void page_set_map(page_directory_t *directory, uint32_t virtual, uint32_t physical);
 
-/**
- * Given a page directory, allocate the second-level page table, and mark
- * set up its permissions.  Set the top-level directory to point to that 
- * new page.  This does *not* set the entry in the page table, @see page_create_map
- * for that.
- * @param directory - the page table to update, can kernel's or users's
- * @param virtual - the virtual address that is being set up.
- * @returns address of the table that was allocated
- **/
-static void page_create_dirent(page_directory_t *directory, uint32_t virtual)
+static void page_turn_on( )
 {
-    
-    uint32_t table_address = memory_find_and_alloc_page( );
-
-    uint32_t index = page_directory_for_virtual(virtual);
-    if (directory->entry[index].present == 1) {
-        kprintf("Error - page_create_dirent() - page already exists!");
-        panic();
-    }
-
-    // store upper 20bit of address for physical table
-    directory->entry[index].value = 0;
-    directory->entry[index].page_addr = table_address >> 12;
-    directory->entry[index].present = 1;
-
-}
-
-/**
- * Map a virtual address to a physical address
- **/
-static void page_create_map(page_table_t *table, uint32_t virtual, uint32_t physical)
-{
-    uint32_t table_index = page_table_for_virtual(virtual);
-    if (table->entry[table_index].present) {
-        kprintf("panic - page table already mapped.");
-        panic();
-    }
-
-   // kprintf("page_create_map(%x,%x,%x), idx=%d\n", table, virtual, physical, table_index);
-    // store upper 20bit of address for physical table
-    table->entry[table_index].value = 0;
-    table->entry[table_index].page_addr = physical >> 12;
-    table->entry[table_index].present = 1;
-}
-
-/*
- * add an entry to map the physical and virtual address in the indicated page table 
- */
-static void page_set_map(page_directory_t *directory, uint32_t virtual, uint32_t physical)
-{
-    // directory entry
-    unsigned int directory_pos = page_directory_for_virtual(virtual);
-    
-    // is page present?
-    if (directory->entry[directory_pos].present == 0) {
-        // nope, need to create a table there
-        page_create_dirent(directory, directory_pos);
-    }
-
-    // table exists (now) - get its address from the directory
-    uint32_t table_addr = directory->entry[directory_pos].page_addr << 12;
-    page_table_t *table = (page_table_t *) table_addr;
-
-    // establish th emapping between physical and virtual addresses.
-    page_create_map(table, virtual, physical);
-}
-
-void page_turn_on( )
-{
-    lcr3((uint32_t ) &_kernel_page_directory);
+    lcr3((uint32_t ) kpage_dir);
     
     uint32_t old = rcr0();
     uint32_t new = old | 0x80000001;
@@ -313,31 +157,97 @@ void page_turn_on( )
     lcr0(new);
 }
 
-void page_debug( )
+
+void page_map(page_directory_t *dir, uint32_t virtual_addr, uint32_t physical_addr)
 {
-    kprintf("****| PAGE DIR @ %x|****\n", kpage_dir);
+    if (dir == NULL) {
+        kprintf("Error - page directory is null\n");
+        panic();
+    }
+
+    unsigned int idx = page_directory_for_virtual(virtual_addr);
+    if (dir->entry[idx].present == 0) {
+        dir->entry[idx].present = 1;
+        uint32_t table_addr = memory_find_and_alloc_page();
+        dir->entry[idx].page_addr = table_addr >> 12;
+    }
+
+    uint32_t addr = (uint32_t)(dir->entry[idx].page_addr << 12);
+    page_table_t *table = (page_table_t *) addr;
     
-    int i,j, num_present =0;
-    for (i = 0; i < 1024; i++) {
-        if (kpage_dir->entry[i].present) num_present++;
-    }
-    kprintf("%d entries present\n", num_present);
+    idx = page_table_for_virtual(virtual_addr);
+    table->entry[idx].present = 1;
+    table->entry[idx].page_addr = physical_addr >> 12;
+ }
 
-    // walk the pages
-    for (i = 0; i < 1024; i++) {
-        if (kpage_dir->entry[i].present) {
-            kprintf("range[%x->%x] -> %x\n", (i << 22), (i+1)<<22, kpage_dir->entry[i].page_addr << 12);
+/** 
+ * Create the kernel's page directory, mapping 
+ * all physical memory to virtual memory
+ */
+static void page_setup_kernel( )
+{
+    uint32_t addr = memory_find_and_alloc_page( );
+    kpage_dir = (page_directory_t *) addr;
+    kmemset(kpage_dir, 0, 4096); // zero out all entries
 
-            page_table_t *table = (page_table_t *)(kpage_dir->entry[i].page_addr << 12);
-            for (j = 0; j < 1024; j++) {
-                if (table->entry[j].present) {
-                    uint32_t phy = (i << 22) + (j << 12);
-                    kprintf(" entry[%d/%x->%x] ", j,phy, table->entry[j].page_addr << 12);
-                }
-            }
-            kprintf("\n");
-        }
+    uint32_t num_pages = memory_total_pages;
+    uint32_t i;
+
+    for (i = 0; i < num_pages; i++) 
+    {
+        // map all of system memory idempotentally
+        page_map(kpage_dir, i << 12, i << 12);
     }
+}
+
+uint32_t page_physical_for_virtual(page_directory_t *dir, uint32_t virtual)
+{
+    uint32_t idx = page_directory_for_virtual(virtual);
+    if (dir->entry[idx].present == 0) {
+        kprintf("Error - physical for virtual, table not found.");
+        panic();
+    }
+    uint32_t table_addr = dir->entry[idx].page_addr << 12;
+    page_table_t *table = (page_table_t *) table_addr;
+    idx = page_table_for_virtual(virtual);
+    if (table->entry[idx].present == 0) {
+        kprintf("Error - physical for virtual, page not found.");
+        panic();
+    }
+    uint32_t physical = table->entry[idx].page_addr << 12;
+    return physical;
+}
+
+// this is really non-optimal, but it works.  
+//TODO: refactor the hell out of this
+void page_copy(page_directory_t *src_dir, uint32_t src_virtual, page_directory_t *dst_dir, uint32_t dst_virtual, uint32_t len)
+{
+    uint32_t curr = 0;
+
+    uint32_t src_offset = src_virtual % 4096;
+    uint32_t dst_offset = dst_virtual % 4096;
+
+    while (curr < len)
+    {
+        uint32_t src_phys = page_physical_for_virtual(src_dir, src_virtual + src_offset + curr);
+        uint32_t dst_phys = page_physical_for_virtual(dst_dir, dst_virtual + dst_offset + curr);
+
+        uint8_t *src_addr = (uint8_t *) src_phys;
+        uint8_t *dst_addr = (uint8_t *) dst_phys;
+
+        *dst_addr = *src_addr;
+        curr++;
+    }
+}
+
+void copy_to_user(uint32_t kernel_virtual, page_directory_t *dst_dir, uint32_t dst_virtual, uint32_t len)
+{
+    page_copy(kpage_dir, kernel_virtual, dst_dir, dst_virtual, len);
+}
+
+void copy_from_user(page_directory_t *src_dir, uint32_t src_virtual, uint32_t kernel_virtual, uint32_t len)
+{
+    page_copy(src_dir, src_virtual, kpage_dir, kernel_virtual, len);
 }
 
 
@@ -346,24 +256,8 @@ void page_debug( )
  */
 void page_init( )
 {
-    // this *must* be called *before* enabling paging ....
-    kprintf("**********************\n");
-    kprintf("kernel page start: %x\n",(unsigned) &_kernel_page_directory);
-
     // find a 4KB page for the page-directory
-    kpage_dir = (page_directory_t *) &_kernel_page_directory;
-    kmemset(kpage_dir, 0, sizeof(page_directory_t)); // zero out all of the entries
-
-    // create a mapping for each page of the kernel's physical address to a virtual address
-    // that is identical.
-    uint32_t addr;
-    uint32_t start = PAGE_SIZE;
-    uint32_t end = (uint32_t) &_kernel_end;
-
-    for (addr= start; addr < end; addr+= 4096) {
-        page_set_map(kpage_dir, addr, addr);
-    }  
-
+    page_setup_kernel();
     page_turn_on();
 }
 
@@ -377,7 +271,7 @@ void memory_init( multiboot_info_t *multiboot_ptr)
     memory_mark_kernel_as_used( );
 
     kprintf("*************************\n");
-    kprintf("Memory: %u total pages, %u pages free\n", (unsigned int) memory_num_pages, (unsigned int) memory_num_free_pages);
+    kprintf("Memory: %u total pages, %u pages free\n", (unsigned int) memory_total_pages, (unsigned int) memory_total_pages - memory_alloc_pages);
     kprintf("*************************\n");
 }
 
