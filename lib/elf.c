@@ -106,16 +106,18 @@ static char *fetch_string(const char *elf_start, uint32_t string_offset)
  * data - a pointer to the elf file's data image
  * alloc - a function to allocate memory, given a virtual address and size
  * */
-int read_elf(const char *elf_start, void *task_data, 
+int read_elf(const char *elf_start, void *task_data,  uint32_t *start_addr, 
     void *(*virt_alloc)(uint32_t virt_start, uint32_t length, void *alloc_data),
     void (*virt_copy)(uint32_t dest, uint32_t src, uint32_t len, void *copy_data))
 {
     elf_header_t *header = (elf_header_t *) elf_start;
 
+
     int rc = validate_header(header);
     if (rc < 0) return rc;
 
-
+    *start_addr = header->entry_address;
+    
     // load headers
     elf_program_header_t *pheaders = 
             (elf_program_header_t *) (elf_start + header->header_offset);

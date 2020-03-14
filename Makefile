@@ -22,6 +22,7 @@ chrdev.o \
 fifo.o \
 ps2.o  \
 keyboard.o  \
+bitmap.o \
 memory.o \
 lib/elf.o \
 task.o

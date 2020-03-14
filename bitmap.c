@@ -14,6 +14,28 @@ void bitmap_init(bitmap_t *bitmap, uint32_t num_bits)
 
 }
 
+void bitmap_set(bitmap_t *bitmap, uint32_t num)
+{
+    if (num > bitmap->num_bits) return;
+
+    uint32_t word = num / 32;
+    uint32_t bit = num % 32;
+
+    bitmap->map[word] = bitmap->map[word] | (1 << bit);
+}
+
+
+void bitmap_clr(bitmap_t *bitmap, uint32_t num)
+{
+    if (num > bitmap->num_bits) return;
+
+    uint32_t word = num / 32;
+    uint32_t bit = num % 32;
+
+    bitmap->map[word] = bitmap->map[word] & ~(1 << bit);
+}
+
+
 void bitmap_clear_all(bitmap_t *bitmap)
 {
     kmemset(bitmap->map, 0, bitmap->num_words * sizeof(uint32_t));
@@ -24,16 +46,20 @@ void bitmap_set_all(bitmap_t *bitmap)
         kmemset(bitmap->map, 0xff, bitmap->num_words * sizeof(uint32_t));
 }
 
-int bitmap_isset(const bitmap_t * const bitmap, int bit)
+int bitmap_isset(const bitmap_t * const bitmap, uint32_t bit)
 {
+    if (bit > bitmap->num_bits) return 0;
+
     int x = bit / 32;
     int y = bit % 32;
     uint32_t word = bitmap->map[x];
     return (word & (1 << y)) ? 1 : 0;
 }
 
-int bitmap_isclr(const bitmap_t * const bitmap, int bit)
+int bitmap_isclr(const bitmap_t * const bitmap, uint32_t bit)
 {
+    if (bit > bitmap->num_bits) return 0;
+    
     int x = bit / 32;
     int y = bit % 32;
     uint32_t word = bitmap->map[x];

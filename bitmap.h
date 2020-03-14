@@ -12,8 +12,12 @@ typedef struct {
 void bitmap_init(bitmap_t *bitmap, uint32_t num_bits);
 void bitmap_clear_all(bitmap_t *bitmap);
 void bitmap_set_all(bitmap_t *bitmap);
-int bitmap_isset(const bitmap_t * const bitmap, int bit);
-int bitmap_isclr(const bitmap_t * const bitmap, int bit);
+
+void bitmap_set(bitmap_t *bitmap, uint32_t bit);
+void bitmap_clr(bitmap_t *bitmap, uint32_t bit);
+
+int bitmap_isset(const bitmap_t * const bitmap, uint32_t bit);
+int bitmap_isclr(const bitmap_t * const bitmap, uint32_t bit);
 int bitmap_first_clear(const bitmap_t * const bitmap);
 
 #endif

@@ -79,21 +79,23 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   task_init( );
   task_t task;
   task_create_from_elf(&task, &_idletask_start);
+  kprintf("Built-In tasks are loaded!\n");
   kprintf("Finished init\n");
+
   asm volatile ("sti");
 
-  while(1) {
-    if (keyboard.keyboard_haschar(&keyboard))
-    {
-      char ch = keyboard.keyboard_getchar(&keyboard);
-      putc(ch);
-    }
-    else {
-      nop();
-    }
-  }
+  // while(1) {
+  //   if (keyboard.keyboard_haschar(&keyboard))
+  //   {
+  //     char ch = keyboard.keyboard_getchar(&keyboard);
+  //     putc(ch);
+  //   }
+  //   else {
+  //     nop();
+  //   }
+  // }
 
-  
+  // dispatching to the scheduler!!!
 
 
   // stoopd program

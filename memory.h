@@ -47,12 +47,15 @@ typedef struct {
 
 
 void memory_init(multiboot_info_t *multiboot_ptr);
-uint32_t memory_find_free_page( );
-void memory_free_page(uint32_t page);
+uint32_t memory_find_and_alloc_page( );
+
 void page_init( );
-void page_copy_to_user(void *kernel_mem, page_directory_t *dest, uint32_t virtual, uint32_t bytes);
-void page_copy_process_memory(page_directory_t *src, page_directory_t *dest);
-void page_create_memory(page_directory_t *dir, uint32_t virtual, uint32_t size);
-uint32_t page_kernel_alloc_page( );
+void page_copy(page_directory_t *src_dir, uint32_t src_virtual, page_directory_t *dst_dir, uint32_t dst_virtual, uint32_t len);
+void copy_to_user(uint32_t kernel_virtual, page_directory_t *dst_dir, uint32_t dst_virtual, uint32_t len);
+void copy_from_user(page_directory_t *src_dir, uint32_t src_virtual, uint32_t kernel_virtual, uint32_t len);
+
+uint32_t page_physical_for_virtual(page_directory_t *dir, uint32_t virtual);
+void page_map(page_directory_t *dir, uint32_t virtual_addr, uint32_t physical_addr);
+
 
 #endif
