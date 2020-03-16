@@ -58,13 +58,15 @@ hang:	hlt
 
 # Bootstrap GDT
 .p2align 2                                # force 4 byte alignment
+.global gdt
 gdt:
   GDTENTRY( 0, 0, 0, 0)                         # null seg
   GDTENTRY(0, 0xffffffff, ACC_KERN_CODE, FLAG_DEFAULT)
   GDTENTRY(0, 0xffffffff, ACC_KERN_DATA, FLAG_DEFAULT)	
   GDTENTRY(0, 0xffffffff, ACC_USER_CODE, FLAG_DEFAULT)	
   GDTENTRY(0, 0xffffffff, ACC_USER_DATA, FLAG_DEFAULT)
-	
+  GDTENTRY(0, 0, 0, 0)
+.global gdtdesc
 gdtdesc:
   .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
   .long   gdt                             # address gdt

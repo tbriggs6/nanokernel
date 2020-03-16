@@ -37,6 +37,14 @@ void show_mem(multiboot_info_t *multiboot_ptr)
 
 }
 
+void kernel_main_task( )
+{
+  while(1) {
+    asm("nop");
+  }
+}
+
+
 void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 {
 
@@ -77,12 +85,17 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   // sigh...
   kprintf("Starting task manager.....\n");
   task_init( );
-  task_t task;
-  task_create_from_elf(&task, &_idletask_start);
-  kprintf("Built-In tasks are loaded!\n");
-  kprintf("Finished init\n");
+  task_t kernel_task;
+  task_create_from_kernel(&kernel_task, &kernel_main_task);
 
+  task_t task;
+  //task_create_from_elf(&task, &_idletask_start);
+  kprintf("Built-In tasks are loaded!\n");
+  
+  switchto(&kernel_task);
+  
   asm volatile ("sti");
+  kprintf("Finished init\n");
 
   // while(1) {
   //   if (keyboard.keyboard_haschar(&keyboard))
@@ -95,7 +108,6 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   //   }
   // }
 
-  // dispatching to the scheduler!!!
 
 
   // stoopd program
@@ -109,5 +121,4 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 //   }
 
 }
-
 

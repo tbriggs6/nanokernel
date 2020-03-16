@@ -9,7 +9,7 @@ extern uint32_t  _kernel_size;
 extern uint32_t  _kernel_start;
 extern uint32_t  _kernel_end;
 
-static page_directory_t *kpage_dir = NULL;
+page_directory_t *kpage_dir = NULL;
 static bitmap_t *mem_free = NULL;
 static uint32_t memory_total_pages = 0;
 static uint32_t memory_alloc_pages = 0;

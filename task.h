@@ -47,12 +47,20 @@ typedef struct {
     uint16_t iopb_offset;
 } task_state_seg_t;
 
+#define LDT_TASK_ENTRIES 8
+#define LDT_TASK_SIZE (LDT_TASK_ENTRIES * sizeof(uint64_t))
 
 typedef struct {
     uint32_t pid;
     uint32_t parent_pid;
     page_directory_t *paging;
     task_state_seg_t *tss;
+    uint64_t ldt[2];
 } task_t;
+
+void task_init();
+void switchto(task_t *task);
+void task_create_from_kernel(task_t *task, void (*kernel_task)());
+void task_create_from_elf(task_t *task, const char *elf_data);
 
 #endif

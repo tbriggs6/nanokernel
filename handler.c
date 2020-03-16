@@ -14,9 +14,9 @@ static void idt_register_handler(uint16_t intnum, idt_gate_t type, void (*handle
    uint32_t handler_address_asint = (uint32_t) handler;
 
   idt_entries[intnum].offset_lo = (handler_address_asint & 0xffff);
-  idt_entries[intnum].selector = 0x08;
-  idt_entries[intnum].zero = 0;
-  idt_entries[intnum].type = 0x8e;
+  idt_entries[intnum].selector = 0x08;  // selects first kernel code segment in GDT (in bytes)
+  idt_entries[intnum].zero = 0;         
+  idt_entries[intnum].type = 0x8e;      // 
   idt_entries[intnum].offset_hi = (handler_address_asint >> 16) & 0xffff;
 }
 
@@ -37,6 +37,8 @@ void excp_handler(int excp_num)
   default: console_puts("EXP UNKNOWN"); break;
   }
   asm("hang_excp: hlt; jmp hang_excp;\n");
+
+  // hmm... what does this look like with TSS?
   return;
 }
 
@@ -71,6 +73,7 @@ void int_handler(int int_num)
   
   pic_end_interrupt(int_num - 32);
 
+  // hmm, what does this look like with a TSS?
   return;
 }
 

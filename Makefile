@@ -63,7 +63,7 @@ myos.iso: isodir/boot/myos.bin isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $@ isodir
 
 run-qemu: myos.iso
-	qemu-system-i386 -d int,cpu_reset -s -cdrom myos.iso
+	qemu-system-i386 -d int,cpu_reset -s -cdrom myos.iso -monitor stdio 
 
 boot.S: gdt.h
 boot.o: boot.S gdt.h
