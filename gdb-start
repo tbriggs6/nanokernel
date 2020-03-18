@@ -1,5 +1,4 @@
 target remote localhost:1234
 symbol-file myos.bin
-b int_handler
-b switchto
+b task_switch
 cont

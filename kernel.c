@@ -39,6 +39,7 @@ void show_mem(multiboot_info_t *multiboot_ptr)
 
 void kernel_main_task( )
 {
+  kprintf("Kernel as a task is running\n");
   while(1) {
     asm("nop");
   }
@@ -71,7 +72,7 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   memory_init(multiboot_ptr);
 
   // initialze paging....
-  page_init( );
+  //page_init( );
 
   kprintf("Enabling keyboard\n");
   
@@ -81,32 +82,31 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   keyboard_init_handler(&keyboard);
   ps2_init(&keyboard);
 
+  asm volatile ("sti");
 
   // sigh...
   kprintf("Starting task manager.....\n");
   task_init( );
-  task_t kernel_task;
-  task_create_from_kernel(&kernel_task, &kernel_main_task);
 
-  task_t task;
-  //task_create_from_elf(&task, &_idletask_start);
-  kprintf("Built-In tasks are loaded!\n");
-  
-  switchto(&kernel_task);
-  
-  asm volatile ("sti");
+
   kprintf("Finished init\n");
 
-  // while(1) {
-  //   if (keyboard.keyboard_haschar(&keyboard))
-  //   {
-  //     char ch = keyboard.keyboard_getchar(&keyboard);
-  //     putc(ch);
-  //   }
-  //   else {
-  //     nop();
-  //   }
-  // }
+
+  task_switch(&kernel_task0);
+
+  // kprintf("Error - this code should not have executed!");
+  // panic();  
+  
+  while(1) {
+    if (keyboard.keyboard_haschar(&keyboard))
+    {
+      char ch = keyboard.keyboard_getchar(&keyboard);
+      putc(ch);
+    }
+    else {
+      nop();
+    }
+  }
 
 
 

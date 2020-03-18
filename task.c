@@ -1,202 +1,134 @@
-#include "list.h"
 #include "kstdlib.h"
 #include "task.h"
 #include "memory.h"
-#include "gdt.h"
-#include "lib/elf.h"
-
-static list_t task_list;
-
-extern uint64_t *gdt;
-extern uint32_t *gdtdesc;
-
-  void gdt_set_tss(uint32_t address, uint32_t size) {
-
-    kprintf("Setting TSS GDT Entry: %x, %d/%x\n", address, size, size);
-    uint64_t limit_low = size & 0xffff;     // low 16-bits
-    uint64_t limit_high = (size >> 16) & 0x0f; // high 4-bits
-    uint64_t base_low = address & 0xffffff;
-    uint64_t base_high = (address >> 24) & 0xff;
-    uint64_t type = 0x89;
-    uint64_t flags = 0x40;
-
-
-    uint64_t gdt_value = 
-        limit_low << 0 | 
-        base_low << 16 |
-        base_high << 56 |
-        type << 40 |
-        flags << 52;
-
-    uint64_t *gdtarr = (uint64_t *)&gdt;
-    kprintf("TSS Entry (%x),(%x): new: %Lx, old: %Lx\n", &gdt, &gdtarr[5], gdt_value, gdtarr[5]);
-    gdtarr[5] = gdt_value;
-  }
-
-
-void task_init()
-{
-   // list_init(&task_list);
-
-  kprintf("Size of tss: %d\n", sizeof(task_state_seg_t));
-  
-}
-
-uint32_t task_next_pid( )
-{
-    static uint32_t pid = 1;
-
-    return ++pid;
-}
-
-/**
- * This is the dumb version of fork() - no modern OS
- * would do it this way.
- * TODO: test this!!!!
- **/
-void task_fork(task_t *task)
-{
-    // task_t child;
-
-    // kmemset(&child, 0, sizeof(task_t));  
-    // child.pid = task_next_pid( );
-    // child.parent_pid = task->pid;
-    // kmemcpy(&child.tss, task->tss, sizeof(task));
-}
-
-static void *task_alloc(uint32_t virt_start, uint32_t length, void *alloc_data)
-{
-    uint32_t phy_addr = memory_find_and_alloc_page( );
-    task_t *task = (task_t*)alloc_data;
-    page_map(task->paging, virt_start, phy_addr);
-    return (void *) virt_start;   
-}
-
-static void task_copy_to_user(uint32_t dest, uint32_t src, uint32_t len, void *copy_data)
-{
-    task_t *task = (task_t *)copy_data;
-    // copy from built-in kernel memory to user task
-
-   copy_to_user(src, task->paging, dest, len);
-}
-
+#include <stdint.h>
 
 extern page_directory_t *kpage_dir;
 
-void task_create_from_kernel(task_t *task, void (*kernel_task)())
+uint8_t kernel_task0_stack[2048];
+const uint32_t kernel_task0_sp = 
+    ((uint32_t) &kernel_task0_stack + 2047);
+
+
+task_t kernel_task0 = {
+    .pid = 0,
+    .parent_pid = 0,
+    .paging = 0,
+    .tss = { 
+        .link = 0, .esp0 = 0, .ss0 = 0x10,
+        .esp1 = 0, .ss1 = 0x10, .esp2 = 0, .ss2 = 0x10,
+        .cr3 = 0, .eip = 0, .eflags = 0, 
+        .eax = 0, .ecx = 0, .edx = 0, .ebx = 0,
+        .esp = 0, .ebp = 0,
+        .esi = 0, .edi = 0,
+        .es = 0x10, 
+        .cs = 0x04,
+        .ds = 0x10,
+        .ss = 0x10,
+        .fs = 0x10,
+        .gs = 0x10,
+        .ldtr = 0x28,              
+        .trace_bitmap = 104
+        },
+    .ldt = { DEFAULT_LDT_CODE, DEFAULT_LDT_DATA },
+    .tss_entry = 0,
+    .ldt_entry = 0,
+    .idt_entry = 0,
+    .state = 0,
+    .next = 0
+    };
+
+
+void set_ldt(uint64_t entry)
 {
-    kmemset(task, 0, sizeof(task_t));
-    task->pid = 0;
-    task->parent_pid = 0; 
-
-    task->tss = (task_state_seg_t *) memory_find_and_alloc_page( );
-    task->paging = kpage_dir;
-
-    uint32_t stack_page_phys = memory_find_and_alloc_page( );
-    page_map(kpage_dir, 0x7fff8000, stack_page_phys);
+    gdt_set_entry(6, &entry);
     
+}
+
+void set_tss(uint64_t entry)
+{
+    gdt_set_entry(5, &entry);
+}
     
-    kprintf("create proc for kernel: TSS@%x, PAGING@%x\n", task->tss, task->paging);
 
-task_state_seg_t *t = task->tss;
-    kprintf("link: %x\n", ((uint32_t)&(t->link)) - (uint32_t)t);
-    kprintf("eflags: %x\n", ((uint32_t)&(t->eflags)) - (uint32_t)t);
-    kprintf("es: %x\n", ((uint32_t)&(t->es)) - (uint32_t)t);
-    kprintf("ldtr: %x\n", ((uint32_t)&(t->ldtr)) - (uint32_t)t);
-    kprintf("iopb: %x\n", ((uint32_t)&(t->iopb_offset)) - (uint32_t)t);
 
-    task->ldt[0] = 0x00cffa000000ffffULL;
-    task->ldt[1] = 0x00cff2000000ffffULL;
 
-    kmemset(task->tss, 0, sizeof(task_state_seg_t));
-    task->tss->cs = GDT_KERNEL_CODE;
-    task->tss->ds = GDT_KERNEL_DATA;
-    task->tss->es = GDT_KERNEL_DATA;
-    task->tss->fs = GDT_KERNEL_DATA;
-    task->tss->gs = GDT_KERNEL_DATA;
-
-    task->tss->ss = GDT_KERNEL_DATA;
-    task->tss->ss0 = GDT_KERNEL_DATA;
-    task->tss->ss1 = GDT_KERNEL_DATA;
-    task->tss->ss2 = GDT_KERNEL_DATA;
-
-    task->tss->esp = 0x7fff8fff;
-    task->tss->esp0 = 0x7fff8fff;
-
-    task->tss->cr3 = (uint32_t)task->paging;      // load the tasks' virtual memory directory
-    task->tss->eip = (uint32_t)kernel_task;
-
-    task->tss->ldtr = 0;
-    task->tss->iopb_offset = sizeof(task_state_seg_t);
-
-    //(uint32_t)task->ldt;
-
-    //list_append(&task_list, task);
+unsigned long long skellix_tss(unsigned long long tss) {
+        unsigned long long tss_entry = 0x0080890000000067ULL;
+        tss_entry |= ((tss)<<16) & 0xffffff0000ULL;
+        tss_entry |= ((tss)<<32) & 0xff00000000000000ULL;
+        return tss_entry;
 }
 
-void task_create_from_elf(task_t *task, const char *elf_data)
-{
-    kmemset(task, 0, sizeof(task_t));
-    task->pid = task_next_pid();
-    task->parent_pid = 0; 
-    task->tss = (task_state_seg_t *) memory_find_and_alloc_page( );
-    task->paging = (page_directory_t *) memory_find_and_alloc_page( );
-   
-    kmemset(task->tss, 0, sizeof(task_state_seg_t));
-    kmemset(task->paging, 0, sizeof(page_directory_t));
 
-    uint32_t start_addr;
-    read_elf(elf_data, (uint32_t *) &start_addr, task, task_alloc, task_copy_to_user);
 
-    task->tss->cs = GDT_USER_CODE;
-    task->tss->ds = GDT_USER_DATA;
-    task->tss->es = GDT_USER_DATA;
-    task->tss->fs = GDT_USER_DATA;
-    task->tss->gs = GDT_USER_DATA;
-    task->tss->ss = GDT_USER_DATA;
-    task->tss->ss0 = GDT_KERNEL_DATA;
-    task->tss->ss1 = GDT_KERNEL_DATA;
-    task->tss->ss2 = GDT_KERNEL_DATA;
-
-    task->tss->cr3 = (uint32_t)task->paging;      // load the tasks' virtual memory directory
-    task->tss->eip = (uint32_t)start_addr;
-    task->ldt[0] = 0x00cffa000000ffffULL;
-    task->ldt[1] = 0x00cff2000000ffffULL;
-
-    //list_append(&task_list, task);
+unsigned long long skellix_ldt(unsigned long long ldt) {
+        unsigned long long ldt_entry = 0x008082000000000fULL;
+        ldt_entry |= ((ldt)<<16) & 0xffffff0000ULL;
+        ldt_entry |= ((ldt)<<32) & 0xff00000000000000ULL;
+        return ldt_entry;
 }
 
-static task_t *current = NULL;
 
-void load_ldt(task_t *task)
+extern void kernel_main_task( );
+task_t task0_init( )
 {
-    uint32_t ldt = task->ldt;
-    unsigned long long ldt_entry = 0x008082000000000fULL;
-    ldt_entry |= ((ldt)<<16) & 0xffffff0000ULL;
-    ldt_entry |= ((ldt)<<32) & 0xff00000000000000ULL;
+ 
+    kernel_task0.paging = (page_directory_t *) kpage_dir;
+    kernel_task0.tss.esp0 = kernel_task0_sp;
+    kernel_task0.tss.eip = kernel_main_task;
+    gdt_entry_t entry = make_gdt_entry(&kernel_task0.ldt, 15, ldt_kernel_type);
+    kernel_task0.ldt_entry = entry.entry_value;
 
+    entry = make_gdt_entry(&kernel_task0.tss, sizeof(task_state_seg_t)-1, gdt_kernel_tss);
+    kernel_task0.tss_entry = entry.entry_value;
+    
 
-    uint64_t *gdtarr = (uint64_t *)&gdt;
-    kprintf("LDT Entry (%x),(%x): new: %Lx, old: %Lx\n", &gdt, &gdtarr[6], ldt_entry, gdtarr[6]);
-    gdtarr[6] = ldt_entry;
+    kprintf("Skelix TSS: %Lx\n", skellix_tss(&kernel_task0.tss));
+    kprintf("Skelix LDT: %Lx\n", skellix_ldt(&kernel_task0.ldt));
+    
+
+    return kernel_task0;
 }
 
-void switchto(task_t *task)
+void task_init()
 {
-    current = task;
-  uint32_t task_gate_segment = GDT_TSS_SEG;
-  struct { uint16_t segment; uint32_t offset; } _tmp;
-  _tmp.segment = task_gate_segment;
-  _tmp.offset = 0;
+    task0_init();
 
-  gdt_set_tss((uint32_t) task->tss, sizeof(task_state_seg_t));
-  lgdt(&gdtdesc);     // reload the GDT
+    gdt_set_value(6, kernel_task0.ldt_entry);
+    gdt_set_value(5, kernel_task0.tss_entry);
+    gdt_make_active();
 
-  ltr(GDT_TSS_SEG);       // load the TSS  -- byte address into the GDT for the TSS entry
+    kprintf("Task Switch: TSS: %Lx\n", kernel_task0.tss_entry);
+    kprintf("             LDT: %Lx\n", kernel_task0.ldt_entry);
 
-  asm("\nhere: 	ljmp	$0x0028,$here\n"
-      "clts\n"
-      :   // no output arguments
-      :   "m" (*&_tmp.offset)
-  );
+
+// these should happen when the task loads
+//    __asm__("ltr  %%ax\n" ::"a"(5*8));
+//   __asm__("lldt  %%ax\n" ::"a"(6*8));
+
+    // code = 1/000 and data = 10/000 = 0x40, 0x10
+    // do task switch
+    // __asm__("   movl    %%esp, %%eax\n"\
+    //     "   pushl   %%ecx\n" \
+    //     "   pushl   %%eax\n" \
+    //     "   pushfl  \n" \
+    //     "   pushl   %%ebx\n" \
+    //     "   pushl   $1f\n" \
+    //     "   iret    \n" \
+    //     "1: movw    %%cx, %%ds\n" \
+    //     "   movw    %%cx, %%es\n" \
+    //     "   movw    %%cx, %%fs\n" \
+    //     "   movw    %%cx, %%gs\n"
+    //     : 
+    //     : "b" (0x04), "c" (0x10)
+    //     :  
+    // );
+}
+
+
+void task_switch(task_t *task)
+{
+    // index is 5, so: 101,000 = 28
+    __asm__ __volatile__("ljmp $0x28,$0\n");
 }
