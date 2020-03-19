@@ -1,3 +1,4 @@
 target remote localhost:1234
 symbol-file myos.bin
-b task_create_from_elf
+b task_switch
+cont

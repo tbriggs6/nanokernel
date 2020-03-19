@@ -49,5 +49,11 @@
     ((flags & 0xf0) | ((limit >> 16) & 0x0f)),	\
     ((base >> 24) & 0xff); 
 
+#define GDT_KERNEL_CODE (1 * 8)
+#define GDT_KERNEL_DATA (2 * 8)
+
+#define GDT_USER_CODE (3 * 8)
+#define GDT_USER_DATA (4 * 8)
+#define GDT_TSS_SEG (5 * 8)
 #endif
 

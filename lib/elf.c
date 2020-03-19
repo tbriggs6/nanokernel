@@ -8,7 +8,7 @@
 #define DBPRINT(...) do{ fprintf( stderr, __VA_ARGS__ ); } while( 0 )
 #define MEMCPY memcpy
 #else
-#include "../kstdlib.h"
+#include "kstdlib.h"
 #define DBPRINT(...) do{ } while ( 0 )
 #define MEMCPY kmemcpy
 #endif

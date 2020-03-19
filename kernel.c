@@ -6,13 +6,12 @@
 #include "console.h"
 #include "handler.h"
 #include "pic.h"
-#include "kstdlib.h"
+#include <kstdlib.h>
 #include "ps2.h"
 #include "keyboard.h"
 #include "kmalloc.h"
 #include "multiboot.h"
 #include "memory.h"
-#include "task.h"
 
 void handle_error( )
 {
@@ -36,6 +35,15 @@ void show_mem(multiboot_info_t *multiboot_ptr)
   }
 
 }
+
+void kernel_main_task( )
+{
+  kprintf("Kernel as a task is running\n");
+  while(1) {
+    asm("nop");
+  }
+}
+
 
 void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 {
@@ -63,7 +71,7 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   memory_init(multiboot_ptr);
 
   // initialze paging....
-  page_init( );
+  //page_init( );
 
   kprintf("Enabling keyboard\n");
   
@@ -73,29 +81,21 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
   keyboard_init_handler(&keyboard);
   ps2_init(&keyboard);
 
-
-  // sigh...
-  kprintf("Starting task manager.....\n");
-  task_init( );
-  task_t task;
-  task_create_from_elf(&task, &_idletask_start);
-  kprintf("Built-In tasks are loaded!\n");
-  kprintf("Finished init\n");
-
   asm volatile ("sti");
 
-  // while(1) {
-  //   if (keyboard.keyboard_haschar(&keyboard))
-  //   {
-  //     char ch = keyboard.keyboard_getchar(&keyboard);
-  //     putc(ch);
-  //   }
-  //   else {
-  //     nop();
-  //   }
-  // }
+  kprintf("Finished init\n");
+  
+  while(1) {
+    if (keyboard.keyboard_haschar(&keyboard))
+    {
+      char ch = keyboard.keyboard_getchar(&keyboard);
+      putc(ch);
+    }
+    else {
+      nop();
+    }
+  }
 
-  // dispatching to the scheduler!!!
 
 
   // stoopd program
@@ -109,5 +109,4 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 //   }
 
 }
-
 
