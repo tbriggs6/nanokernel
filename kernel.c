@@ -6,13 +6,12 @@
 #include "console.h"
 #include "handler.h"
 #include "pic.h"
-#include "kstdlib.h"
+#include <kstdlib.h>
 #include "ps2.h"
 #include "keyboard.h"
 #include "kmalloc.h"
 #include "multiboot.h"
 #include "memory.h"
-#include "task.h"
 
 void handle_error( )
 {
@@ -84,18 +83,7 @@ void kmain(multiboot_info_t *multiboot_ptr, uint32_t multiboot_magic)
 
   asm volatile ("sti");
 
-  // sigh...
-  kprintf("Starting task manager.....\n");
-  task_init( );
-
-
   kprintf("Finished init\n");
-
-
-  task_switch(&kernel_task0);
-
-  // kprintf("Error - this code should not have executed!");
-  // panic();  
   
   while(1) {
     if (keyboard.keyboard_haschar(&keyboard))

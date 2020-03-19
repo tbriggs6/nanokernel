@@ -3,29 +3,28 @@ AS:=$(TARGET)-as
 CC:=$(TARGET)-gcc
 LD:=$(TARGET)-ld
 
-CFLAGS := -ffreestanding -O0 -Wall -Wextra -nostdlib -nostartfiles -nodefaultlibs  -Wl,--build-id=none  -ggdb
+PWD:=`pwd`
+CFLAGS := -ffreestanding -O0 -Wall -Wextra -nostdlib -nostartfiles -nodefaultlibs  -Wl,--build-id=none  -ggdb -I$(PWD) -I$(PWD)/lib
 CPPFLAGS:=$(CFLAGS)
 LIBS:=-L/opt/cross/lib/gcc/i686-elf/6.4.0  -lgcc
 
 OBJS:=\
-boot.o \
-builtin.o \
+asm/boot.o \
+asm/intr.o \
+lib/list.o \
+lib/kmalloc.o \
+lib/kstdlib.o \
+lib/fifo.o \
+lib/bitmap.o \
+lib/elf.o \
 kernel.o \
 console.o \
-intr.o \
 handler.o \
 pic.o \
-kmalloc.o \
-kstdlib.o \
-list.o \
 chrdev.o \
-fifo.o \
 ps2.o  \
 keyboard.o  \
-bitmap.o \
-memory.o \
-lib/elf.o \
-task.o
+memory.o 
 
 
 all: myos.bin idle.bin
